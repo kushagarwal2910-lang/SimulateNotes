@@ -293,11 +293,9 @@ function repairJsx(code: string): string {
   // 3. Remove any remaining raw backslashes before characters to prevent Unicode escape syntax errors
   repaired = repaired.replace(/\\([a-zA-Z_])/g, "$1");
 
-  // 4. Auto-close void HTML tags
-  repaired = repaired.replace(/<input\s+([^>]*[^\/])>/gi, "<input $1 />");
-  repaired = repaired.replace(/<img\s+([^>]*[^\/])>/gi, "<img $1 />");
-  repaired = repaired.replace(/<br>/gi, "<br />");
-  repaired = repaired.replace(/<hr>/gi, "<hr />");
+  // 4. Auto-close simple void HTML tags
+  repaired = repaired.replace(/<br\s*>/gi, "<br />");
+  repaired = repaired.replace(/<hr\s*>/gi, "<hr />");
 
   // 5. Fix HTML attribute names to JSX
   repaired = repaired.replace(/(\s)class=/g, "$1className=");
@@ -421,10 +419,8 @@ export async function GET(req: NextRequest) {
       r = r.replace(/\\\\sum/g, "∑");
       r = r.replace(/\\\\int/g, "∫");
       r = r.replace(/\\\\([a-zA-Z_])/g, "$1");
-      r = r.replace(/<input\\s+([^>]*[^\\/])>/gi, "<input $1 />");
-      r = r.replace(/<img\\s+([^>]*[^\\/])>/gi, "<img $1 />");
-      r = r.replace(/<br>/gi, "<br />");
-      r = r.replace(/<hr>/gi, "<hr />");
+      r = r.replace(/<br\\s*>/gi, "<br />");
+      r = r.replace(/<hr\\s*>/gi, "<hr />");
       r = r.replace(/(\\s)class=/g, "$1className=");
       r = r.replace(/(\\s)for=/g, "$1htmlFor=");
       r = r.replace(/<!--([\\s\\S]*?)-->/g, "{/* $1 */}");

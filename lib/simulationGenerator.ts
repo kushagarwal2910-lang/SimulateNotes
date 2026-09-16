@@ -59,11 +59,9 @@ function cleanJsxCode(raw: string): { code: string; componentName: string } {
   // Remove any remaining raw backslashes before characters to prevent Unicode escape syntax errors
   cleaned = cleaned.replace(/\\([a-zA-Z_])/g, "$1");
 
-  // Auto-close void HTML tags
-  cleaned = cleaned.replace(/<input\s+([^>]*[^\/])>/gi, "<input $1 />");
-  cleaned = cleaned.replace(/<img\s+([^>]*[^\/])>/gi, "<img $1 />");
-  cleaned = cleaned.replace(/<br>/gi, "<br />");
-  cleaned = cleaned.replace(/<hr>/gi, "<hr />");
+  // Auto-close simple void HTML tags
+  cleaned = cleaned.replace(/<br\s*>/gi, "<br />");
+  cleaned = cleaned.replace(/<hr\s*>/gi, "<hr />");
 
   // Fix HTML attribute names to JSX
   cleaned = cleaned.replace(/(\s)class=/g, "$1className=");
