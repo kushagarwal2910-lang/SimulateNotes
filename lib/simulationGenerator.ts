@@ -30,6 +30,48 @@ function cleanJsxCode(raw: string): { code: string; componentName: string } {
   cleaned = cleaned.replace(/export\s+function/g, "function");
   cleaned = cleaned.replace(/export\s+default\s+/g, "");
 
+  // Replace LaTeX macros with clean mathematical Unicode
+  cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)");
+  cleaned = cleaned.replace(/\\mathbf\{([^}]+)\}/g, "$1");
+  cleaned = cleaned.replace(/\\mathit\{([^}]+)\}/g, "$1");
+  cleaned = cleaned.replace(/\\mathrm\{([^}]+)\}/g, "$1");
+  cleaned = cleaned.replace(/\\text\{([^}]+)\}/g, "$1");
+  cleaned = cleaned.replace(/\\partial/g, "∂");
+  cleaned = cleaned.replace(/\\nabla/g, "∇");
+  cleaned = cleaned.replace(/\\alpha/g, "α");
+  cleaned = cleaned.replace(/\\beta/g, "β");
+  cleaned = cleaned.replace(/\\gamma/g, "γ");
+  cleaned = cleaned.replace(/\\delta/g, "δ");
+  cleaned = cleaned.replace(/\\theta/g, "θ");
+  cleaned = cleaned.replace(/\\omega/g, "ω");
+  cleaned = cleaned.replace(/\\lambda/g, "λ");
+  cleaned = cleaned.replace(/\\times/g, "×");
+  cleaned = cleaned.replace(/\\cdot/g, "·");
+  cleaned = cleaned.replace(/\\pm/g, "±");
+  cleaned = cleaned.replace(/\\infty/g, "∞");
+  cleaned = cleaned.replace(/\\approx/g, "≈");
+  cleaned = cleaned.replace(/\\neq/g, "≠");
+  cleaned = cleaned.replace(/\\leq/g, "≤");
+  cleaned = cleaned.replace(/\\geq/g, "≥");
+  cleaned = cleaned.replace(/\\sum/g, "∑");
+  cleaned = cleaned.replace(/\\int/g, "∫");
+
+  // Remove any remaining raw backslashes before characters to prevent Unicode escape syntax errors
+  cleaned = cleaned.replace(/\\([a-zA-Z_])/g, "$1");
+
+  // Auto-close void HTML tags
+  cleaned = cleaned.replace(/<input\s+([^>]*[^\/])>/gi, "<input $1 />");
+  cleaned = cleaned.replace(/<img\s+([^>]*[^\/])>/gi, "<img $1 />");
+  cleaned = cleaned.replace(/<br>/gi, "<br />");
+  cleaned = cleaned.replace(/<hr>/gi, "<hr />");
+
+  // Fix HTML attribute names to JSX
+  cleaned = cleaned.replace(/(\s)class=/g, "$1className=");
+  cleaned = cleaned.replace(/(\s)for=/g, "$1htmlFor=");
+
+  // Fix HTML comments
+  cleaned = cleaned.replace(/<!--([\s\S]*?)-->/g, "{/* $1 */}");
+
   // Extract component name
   const nameMatch = cleaned.match(/function\s+([A-Z][a-zA-Z0-9_]*)/);
   const componentName = nameMatch ? nameMatch[1] : "GeneratedSimulation";
