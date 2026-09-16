@@ -69,6 +69,7 @@ interface ServerStore {
   jobs: Map<string, any>;
   telemetry: any;
   ragCaches: Map<string, any>;
+  simulations: Map<string, any>;
 }
 
 declare global {
@@ -84,6 +85,7 @@ function getGlobalStore(): ServerStore {
       jobs: new Map(),
       telemetry: null,
       ragCaches: new Map(),
+      simulations: new Map(),
     };
   }
   return globalThis.__simulatenotes_store;
@@ -217,4 +219,27 @@ export function saveRagCache(notebookId: string, data: any): void {
   store.ragCaches.set(notebookId, data);
   const cachePath = getStoragePath("rag_cache", `${notebookId}.json`);
   safeWriteJson(cachePath, data);
+}
+
+// Dynamic Simulation Code Storage
+export function saveSimulationCode(id: string, code: string, metadata: any): void {
+  const store = getGlobalStore();
+  store.simulations.set(id, { code, metadata, updatedAt: Date.now() });
+
+  const filePath = getStoragePath("dynamic_simulations", `${id}.json`);
+  safeWriteJson(filePath, { id, code, metadata, updatedAt: Date.now() });
+}
+
+export function getSimulationCode(id: string): { code: string; metadata: any } | null {
+  const store = getGlobalStore();
+  if (store.simulations.has(id)) {
+    return store.simulations.get(id);
+  }
+  const filePath = getStoragePath("dynamic_simulations", `${id}.json`);
+  const onDisk = safeReadJson(filePath, null);
+  if (onDisk) {
+    store.simulations.set(id, onDisk);
+    return onDisk;
+  }
+  return null;
 }

@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine whether user wants to create a new simulation or ask about existing one
-    const isExplicitSimulation = /\b(simulate|simulation|generate|create|model|build|make|visualize|new)\b/i.test(query);
+    const isExplicitSimulation = /\b(simulate|simulation|generate|create|model|build|make|visualize|new|solve)\b/i.test(query);
 
     let matchesExistingTopic = false;
     if (cacheData && cacheData.simulation) {
@@ -215,8 +215,11 @@ export async function POST(req: NextRequest) {
       matchesExistingTopic = simTitleWords.some((w: string) => lowerQuery.includes(w));
     }
 
-    // Only preserve existing simulation if the query is an explanatory follow-up about that specific topic
-    if (!matchedSim && cacheData && cacheData.simulation && !isExplicitSimulation && matchesExistingTopic) {
+    // If the user explicitly asks to simulate, model, create, or build something, ALWAYS generate dynamic simulation!
+    if (isExplicitSimulation) {
+      matchedSim = undefined;
+    } else if (!matchedSim && cacheData && cacheData.simulation && matchesExistingTopic) {
+      // Only preserve existing simulation if the query is an explanatory follow-up about that specific topic
       matchedSim = cacheData.simulation;
     }
 
@@ -228,6 +231,7 @@ export async function POST(req: NextRequest) {
     let answer = "";
     let dynamicGeneration = false;
     let generationJobId: string | undefined;
+    let generatedSimulation: SimulationItem | null = null;
 
     if (!isDynamicTopic && matchedSim) {
       const topContext = retrievedContextSnippets[0] || matchedSim.description;
@@ -241,7 +245,7 @@ export async function POST(req: NextRequest) {
         ? topSnippets.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")
         : `Analyzing indexed technical knowledge for: "${query}".`;
 
-      answer = `Based on the authoritative sources currently indexed in your notebook's RAG database [1, 2, 3]:\n\n${snippetText}\n\n### 🔬 LangGraph Simulation Pipeline Active\n\nI have extracted the governing physical relationships and mathematical equations from your RAG knowledge base. Now dispatching to the dual LangGraph agents:\n\n1. **Agent 1 (Spec Synthesizer)**: Formulates equations, state variables, and SVG scene blueprints into a verified JSON specification.\n2. **Agent 2 (Simulation Engine)**: Generates React 18 + GSAP simulation code, verifies AST with Babel, self-heals, and exports the 60 FPS interactive model.\n\n⏳ **Follow real-time compilation in the Studio panel on the right!**`;
+      answer = `Based on the authoritative sources currently indexed in your notebook's RAG database [1, 2, 3]:\n\n${snippetText}\n\n### 🔬 LangGraph Simulation Pipeline Active\n\nI have extracted the governing physical relationships and mathematical equations from your RAG knowledge base. Now dispatching to the dual LangGraph agents:\n\n1. **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG scene blueprints into a verified JSON specification.\n2. **Agent 2 (Simulation Engine)**: Generating React 18 + GSAP simulation code, verifying AST with Babel, self-healing, and exporting the 60 FPS interactive model.\n\n⏳ **Follow real-time compilation in the Studio panel on the right!**`;
 
       // Start the background pipeline passing notebookId (so it uses the already indexed RAG store)
       try {
@@ -253,6 +257,9 @@ export async function POST(req: NextRequest) {
         });
         const genData = await genRes.json();
         generationJobId = genData.jobId;
+        if (genData.simulation) {
+          generatedSimulation = genData.simulation;
+        }
       } catch (err) {
         console.error("Failed to start dynamic pipeline:", err);
       }
@@ -263,7 +270,7 @@ export async function POST(req: NextRequest) {
       query,
       sources: activeSources,
       answer,
-      simulation: isDynamicTopic ? null : matchedSim,
+      simulation: isDynamicTopic ? generatedSimulation : matchedSim,
       dynamicGeneration,
       generationJobId,
     });

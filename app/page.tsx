@@ -351,27 +351,61 @@ export default function App() {
           );
         }, 1000);
       } else if (isDynamic && currentSim) {
-        const simMsg: ChatMessage = {
-          id: `agent2-${Date.now()}`,
-          role: "agent_simulation",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          content: `I've dispatched your query and retrieved RAG context to the **LangGraph Dual-Agent pipeline**:\n\n• **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG blueprint into a dense JSON prompt\n• **Agent 2 (Simulation Engine)**: Compiling React 18 + GSAP code, running Babel AST check and self-healing\n\nTrack live compilation in the Studio panel on the right!`,
-          simulation: currentSim,
-        };
+        if (currentSim.previewUrl) {
+          // Simulation was generated immediately during the request
+          const readyMsg: ChatMessage = {
+            id: `agent2-ready-${Date.now()}`,
+            role: "agent_simulation",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            content: `🎉 Successfully generated, AST-verified, and compiled the interactive simulation for **${currentSim.title}**! You can now interact with sliders and live parameters in the Studio.`,
+            simulation: currentSim,
+          };
 
-        setNotebooks((prev) =>
-          prev.map((nb) => {
-            if (nb.id !== activeNotebook.id) return nb;
-            const updated = { ...nb, simulation: currentSim, messages: [...nb.messages, simMsg] };
-            saveNoteToDisk(updated);
-            return updated;
-          })
-        );
+          setNotebooks((prev) =>
+            prev.map((nb) => {
+              if (nb.id !== activeNotebook.id) return nb;
+              const updatedNb = {
+                ...nb,
+                title: nb.title === "Untitled Notebook" || nb.title.includes("...") || nb.title === "Untitled Note" ? currentSim!.title : nb.title,
+                simulation: currentSim,
+                messages: [...nb.messages, readyMsg],
+              };
+              saveNoteToDisk(updatedNb);
+              return updatedNb;
+            })
+          );
 
-        if (!isStudioOpen) setIsStudioOpen(true);
+          if (!isStudioOpen) setIsStudioOpen(true);
 
-        // Start polling for completion (1-second cadence for real-time progress)
-        if (dynamicJobId) {
+          setTimeout(() => {
+            voiceAssistant.askAssistant(
+              `Simulation for ${currentSim!.title} compiled successfully. Walk me through the controls and demonstrate the physics.`,
+              "demonstrate"
+            );
+          }, 1000);
+        } else {
+          // Simulation is compiling in the background, poll for status
+          const simMsg: ChatMessage = {
+            id: `agent2-${Date.now()}`,
+            role: "agent_simulation",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            content: `I've dispatched your query and retrieved RAG context to the **LangGraph Dual-Agent pipeline**:\n\n• **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG blueprint into a dense JSON prompt\n• **Agent 2 (Simulation Engine)**: Compiling React 18 + GSAP code, running Babel AST check and self-healing\n\nTrack live compilation in the Studio panel on the right!`,
+            simulation: currentSim,
+          };
+
+          setNotebooks((prev) =>
+            prev.map((nb) => {
+              if (nb.id !== activeNotebook.id) return nb;
+              const updated = { ...nb, simulation: currentSim, messages: [...nb.messages, simMsg] };
+              saveNoteToDisk(updated);
+              return updated;
+            })
+          );
+
+          if (!isStudioOpen) setIsStudioOpen(true);
+
+          // Start polling for completion (1-second cadence for real-time progress)
+          if (dynamicJobId) {
           const pollStartTime = Date.now();
           const pollInterval = setInterval(async () => {
             try {
@@ -471,6 +505,7 @@ export default function App() {
           }, 1000);
         }
       }
+    }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,
