@@ -4,7 +4,8 @@ import fs from "fs";
 import { SIMULATIONS_CATALOG, SimulationItem } from "@/lib/simulationsData";
 import { PRESET_SIMULATENOTES } from "@/lib/simulateNotesData";
 import { SourceDocument } from "@/lib/simulateNotesTypes";
-import { getRagCache } from "@/lib/storage";
+import { getRagCache, setJob } from "@/lib/storage";
+import { generateSimulation } from "@/lib/simulationGenerator";
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,19 +52,32 @@ export async function POST(req: NextRequest) {
 
     // If active sources is strictly 0, auto-dispatch the full pipeline (Tavily research + Simulation generation)
     if (availableSources.length === 0 && indexedChunks.length === 0) {
-      let generationJobId: string | undefined;
-      try {
-        const baseUrl = req.nextUrl.origin || "http://localhost:3000";
-        const genRes = await fetch(`${baseUrl}/api/generate-simulation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, notebookId }),
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      setJob(jobId, {
+        status: "running",
+        step: "spec",
+        detail: `Synthesizing physical model and state equations for: ${query}`,
+        timestamp: Date.now() / 1000,
+      });
+
+      // Launch simulation in background
+      generateSimulation(query, jobId, (step, detail) => {
+        setJob(jobId, {
+          status: "running",
+          step,
+          detail,
+          timestamp: Date.now() / 1000,
         });
-        const genData = await genRes.json();
-        generationJobId = genData.jobId;
-      } catch (err) {
-        console.error("Failed to auto-start dynamic pipeline for empty note:", err);
-      }
+      }).then((simulation) => {
+        setJob(jobId, {
+          status: "completed",
+          step: "completed",
+          detail: `Verified and compiled 60 FPS simulation for: ${simulation.title}`,
+          timestamp: Date.now() / 1000,
+          result: { simulation },
+          simulation,
+        });
+      }).catch(console.error);
 
       return NextResponse.json({
         status: "success",
@@ -72,7 +86,7 @@ export async function POST(req: NextRequest) {
         sources: [],
         simulation: null,
         dynamicGeneration: true,
-        generationJobId,
+        generationJobId: jobId,
       });
     }
 
@@ -247,21 +261,43 @@ export async function POST(req: NextRequest) {
 
       answer = `Based on the authoritative sources currently indexed in your notebook's RAG database [1, 2, 3]:\n\n${snippetText}\n\n### 🔬 LangGraph Simulation Pipeline Active\n\nI have extracted the governing physical relationships and mathematical equations from your RAG knowledge base. Now dispatching to the dual LangGraph agents:\n\n1. **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG scene blueprints into a verified JSON specification.\n2. **Agent 2 (Simulation Engine)**: Generating React 18 + GSAP simulation code, verifying AST with Babel, self-healing, and exporting the 60 FPS interactive model.\n\n⏳ **Follow real-time compilation in the Studio panel on the right!**`;
 
-      // Start the background pipeline passing notebookId (so it uses the already indexed RAG store)
-      try {
-        const baseUrl = req.nextUrl.origin || "http://localhost:3000";
-        const genRes = await fetch(`${baseUrl}/api/generate-simulation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, notebookId }),
+      // Directly run generation with state tracking
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      generationJobId = jobId;
+
+      setJob(jobId, {
+        status: "running",
+        step: "spec",
+        detail: `Synthesizing physical model and state equations for: ${query}`,
+        timestamp: Date.now() / 1000,
+      });
+
+      const simPromise = generateSimulation(query, jobId, (step, detail) => {
+        setJob(jobId, {
+          status: "running",
+          step,
+          detail,
+          timestamp: Date.now() / 1000,
         });
-        const genData = await genRes.json();
-        generationJobId = genData.jobId;
-        if (genData.simulation) {
-          generatedSimulation = genData.simulation;
-        }
+      }).then((simulation) => {
+        setJob(jobId, {
+          status: "completed",
+          step: "completed",
+          detail: `Verified and compiled 60 FPS simulation for: ${simulation.title}`,
+          timestamp: Date.now() / 1000,
+          result: { simulation },
+          simulation,
+        });
+        return simulation;
+      });
+
+      try {
+        generatedSimulation = await Promise.race([
+          simPromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
       } catch (err) {
-        console.error("Failed to start dynamic pipeline:", err);
+        console.error("Simulation generation error in rag-agent:", err);
       }
     }
 

@@ -343,6 +343,10 @@ export async function GET(req: NextRequest) {
       try {
         const compiled = Babel.transform(sourceCode, { presets: [['react', { runtime: 'classic' }]] }).code;
         
+        // Find component function name from source code
+        const fnMatch = sourceCode.match(/function\s+([A-Z][a-zA-Z0-9_]*)/);
+        const compName = fnMatch ? fnMatch[1] : ${JSON.stringify(componentName)};
+
         const ErrorBoundary = class extends React.Component {
           constructor(props) {
             super(props);
@@ -370,38 +374,11 @@ export async function GET(req: NextRequest) {
 
         const runner = new Function(
           'React', 'ReactDOM', 'gsap', 'THREE', 'ErrorBoundary',
-          \`const { useState, useEffect, useRef, useMemo, useCallback } = React;
-          \${compiled}
-          
-          let targetComponent = null;
-          if (typeof \${JSON.stringify(componentName)} !== 'undefined') {
-            try { targetComponent = eval(\${JSON.stringify(componentName)}); } catch(e){}
-          }
-          if (!targetComponent) {
-            // Find any function component in scope
-            const fnMatches = \${JSON.stringify(compiled)}.match(/function\\s+([A-Z][a-zA-Z0-9_]*)/g);
-            if (fnMatches && fnMatches.length > 0) {
-              for (const fn of fnMatches) {
-                const name = fn.replace('function ', '').trim();
-                try {
-                  const candidate = eval(name);
-                  if (typeof candidate === 'function') {
-                    targetComponent = candidate;
-                    break;
-                  }
-                } catch(e){}
-              }
-            }
-          }
-          
-          if (targetComponent) {
-            ReactDOM.createRoot(document.getElementById('root')).render(
-              React.createElement(ErrorBoundary, null, React.createElement(targetComponent))
-            );
-          } else {
-            document.getElementById('root').innerHTML = '<div style="color: #f87171; padding: 24px; font-family: monospace;">⚠️ Could not mount simulation component.</div>';
-          }
-          \`
+          'const { useState, useEffect, useRef, useMemo, useCallback } = React;\\n' +
+          compiled +
+          '\\nReactDOM.createRoot(document.getElementById("root")).render(' +
+          'React.createElement(ErrorBoundary, null, React.createElement(' + compName + '))' +
+          ');'
         );
         runner(window.React, window.ReactDOM, window.gsap, window.THREE, ErrorBoundary);
       } catch (err) {
