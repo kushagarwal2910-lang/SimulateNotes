@@ -1,0 +1,695 @@
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { gsap } from "gsap";
+
+export default function LithiumIonBatteryDynamicsSimulation() {
+  // State for user-controlled parameters
+  const [soc, setSoc] = useState(80);
+  const [cRate, setCRate] = useState(1.0);
+  const [capacity, setCapacity] = useState(3000);
+  const [internalResistance, setInternalResistance] = useState(0.04);
+  const [ambientTemp, setAmbientTemp] = useState(25);
+  const [mode, setMode] = useState("discharge");
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showElectronTrail, setShowElectronTrail] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+
+  // Derived physics calculations
+  const {
+    nominalCurrent,
+    openCircuitVoltage,
+    voltageDrop,
+    terminalVoltageDischarge,
+    terminalVoltageCharge,
+    terminalVoltage,
+    cellPower,
+    jouleHeating,
+    anodeLithiumFraction,
+    cathodeLithiumFraction,
+  } = useMemo(() => {
+    const nominalCurrent = (cRate * capacity) / 1000;
+    const openCircuitVoltage =
+      3.0 + 1.15 * Math.pow(soc / 100, 0.45) + 0.05 * (soc / 100);
+    const voltageDrop = nominalCurrent * internalResistance;
+    const terminalVoltageDischarge = Math.max(
+      2.8,
+      openCircuitVoltage - voltageDrop
+    );
+    const terminalVoltageCharge = Math.min(
+      4.25,
+      openCircuitVoltage + voltageDrop
+    );
+    const terminalVoltage =
+      mode === "discharge"
+        ? terminalVoltageDischarge
+        : mode === "charge"
+        ? terminalVoltageCharge
+        : openCircuitVoltage;
+    const cellPower = nominalCurrent * terminalVoltage;
+    const jouleHeating = Math.pow(nominalCurrent, 2) * internalResistance;
+    const anodeLithiumFraction = soc / 100;
+    const cathodeLithiumFraction = 1 - soc / 100;
+
+    return {
+      nominalCurrent,
+      openCircuitVoltage,
+      voltageDrop,
+      terminalVoltageDischarge,
+      terminalVoltageCharge,
+      terminalVoltage,
+      cellPower,
+      jouleHeating,
+      anodeLithiumFraction,
+      cathodeLithiumFraction,
+    };
+  }, [soc, cRate, capacity, internalResistance, mode]);
+
+  // Refs for SVG elements and animation
+  const svgRef = useRef(null);
+  const lithiumIonRefs = useRef([]);
+  const electronLeftRefs = useRef([]);
+  const electronRightRefs = useRef([]);
+  const socGaugeRef = useRef(null);
+  const bulbRef = useRef(null);
+  const plugRef = useRef(null);
+
+  // Animation constants
+  const ION_COUNT = 28;
+  const ELECTRON_COUNT_PER_WIRE = 20;
+  const BASE_ION_SPEED = 40; // pixels per second at 1C
+  const BASE_ELECTRON_SPEED = 80; // pixels per second at 1C
+  const ANODE_X_START = 60;
+  const ANODE_X_END = 260;
+  const SEPARATOR_X_START = 260;
+  const SEPARATOR_X_END = 460;
+  const CATHODE_X_START = 460;
+  const CATHODE_X_END = 660;
+  const WIRE_Y = 50;
+  const ELECTROLYTE_Y = 190;
+  const LOAD_CENTER_X = 360;
+  const LOAD_WIDTH = 20;
+
+  // Calculate dynamic speeds based on C-rate
+  const ionSpeed = BASE_ION_SPEED * cRate;
+  const electronSpeed = BASE_ELECTRON_SPEED * cRate;
+
+  // GSAP context for animation lifecycle
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      let tickId = null;
+
+      const updatePositions = (delta) => {
+        const dt = delta / 1000; // Convert to seconds
+
+        // Update lithium ions (horizontal motion through separator)
+        if (mode !== "idle") {
+          lithiumIonRefs.current.forEach((ref) => {
+            if (!ref) return;
+            let currentX = parseFloat(ref.getAttribute("cx"));
+            let newX;
+
+            if (mode === "discharge") {
+              newX = currentX + ionSpeed * dt;
+              if (newX > SEPARATOR_X_END) {
+                newX = SEPARATOR_X_START; // Reset to left edge of separator
+              }
+            } else if (mode === "charge") {
+              newX = currentX - ionSpeed * dt;
+              if (newX < SEPARATOR_X_START) {
+                newX = SEPARATOR_X_END; // Reset to right edge of separator
+              }
+            }
+
+            ref.setAttribute("cx", newX);
+          });
+        }
+
+        // Update electrons in left wire (anode to load)
+        electronLeftRefs.current.forEach((ref) => {
+          if (!ref) return;
+          let currentX = parseFloat(ref.getAttribute("cx"));
+          let newX;
+
+          if (mode === "discharge") {
+            newX = currentX + electronSpeed * dt;
+            if (newX > LOAD_CENTER_X - LOAD_WIDTH / 2) {
+              newX = ANODE_X_START; // Reset to anode terminal
+            }
+          } else if (mode === "charge") {
+            newX = currentX - electronSpeed * dt;
+            if (newX < ANODE_X_START) {
+              newX = LOAD_CENTER_X - LOAD_WIDTH / 2; // Reset to load left edge
+            }
+          }
+
+          ref.setAttribute("cx", newX);
+        });
+
+        // Update electrons in right wire (load to cathode)
+        electronRightRefs.current.forEach((ref) => {
+          if (!ref) return;
+          let currentX = parseFloat(ref.getAttribute("cx"));
+          let newX;
+
+          if (mode === "discharge") {
+            newX = currentX + electronSpeed * dt;
+            if (newX > CATHODE_X_END) {
+              newX = LOAD_CENTER_X + LOAD_WIDTH / 2; // Reset to load right edge
+            }
+          } else if (mode === "charge") {
+            newX = currentX - electronSpeed * dt;
+            if (newX < LOAD_CENTER_X + LOAD_WIDTH / 2) {
+              newX = CATHODE_X_END; // Reset to cathode terminal
+            }
+          }
+
+          ref.setAttribute("cx", newX);
+        });
+      };
+
+      if (isPlaying) {
+        tickId = gsap.ticker.add(updatePositions);
+      }
+
+      return () => {
+        if (tickId) gsap.ticker.remove(tickId);
+      };
+    }, [svgRef, mode, isPlaying, ionSpeed, electronSpeed]);
+
+    return () => {
+      ctx.revert();
+    };
+  }, [soc, cRate, capacity, internalResistance, mode, isPlaying]);
+
+  // Reset battery to 100% SoC
+  const resetBattery = () => {
+    setSoc(100);
+    setMode("discharge");
+    setIsPlaying(true);
+  };
+
+  // Toggle play/pause
+  const togglePlay = () => setIsPlaying(!isPlaying);
+
+  // Define colors from spec
+  const colors = {
+    anodeGraphite: "#334155",
+    anodeCopper: "#b45309",
+    cathodeOxide: "#475569",
+    cathodeAluminum: "#94a3b8",
+    separator: "rgba(56, 189, 248, 0.25)",
+    electrolyte: "rgba(30, 58, 138, 0.18)",
+    lithiumIon: "#fbbf24",
+    lithiumGlow: "rgba(245, 158, 11, 0.6)",
+    electron: "#38bdf8",
+    electronGlow: "rgba(56, 189, 248, 0.7)",
+    wire: "#64748b",
+  };
+
+  return (
+    <div className="simulation-container" style={{ background: "#0b0f19", minHeight: "100vh", padding: "20px", color: "#e2e8f0", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+      <div className="header">
+        <h1 style={{ textAlign: "center", color: "#fbbf24", marginBottom: "10px" }}>
+          Lithium-Ion Battery: Intercalation & Rocking-Chair Electrochemistry
+        </h1>
+        <p style={{ textAlign: "center", color: "#94a3b8", maxWidth: "800px", margin: "0 auto" }}>
+          Visually demonstrate the microscopic and macroscopic working principles of a lithium-ion battery: how Li+ ions de-intercalate and migrate through the liquid electrolyte and porous separator between the graphite anode and cobalt oxide cathode, while electrons travel through the external circuit powering a load during discharge or being forced back by a power supply during charge.
+        </p>
+      </div>
+
+      <div className="main-content" style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center" }}>
+        {/* SVG Simulation */}
+        <div className="svg-wrapper" style={{ flex: "1", minWidth: "300px" }}>
+          <svg
+            ref={svgRef}
+            viewBox="0 0 920 380"
+            style={{ width: "100%", height: "auto", display: "block" }}
+          >
+            {/* Definitions for gradients and filters */}
+            <defs>
+              <linearGradient id="socGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="0.6%" stopColor="#10b981" />
+                <stop offset="0.6%" stopColor="#f59e0b" />
+                <stop offset="0.8%" stopColor="#f59e0b" />
+                <stop offset="0.8%" stopColor="#ef4444" />
+                <stop offset="100%" stopColor="#ef4444" />
+              </linearGradient>
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Battery Casing */}
+            <rect
+              x="50"
+              y="50"
+              width="620"
+              height="280"
+              rx="20"
+              ry="20"
+              fill="none"
+              stroke="#64748b"
+              strokeWidth="2"
+            />
+
+            {/* Anode Structure (Graphite Layers) */}
+            <g>
+              {/* Copper current collector */}
+              <rect
+                x={ANODE_X_START}
+                y="80"
+                width={ANODE_X_END - ANODE_X_START}
+                height="20"
+                fill={colors.anodeCopper}
+              />
+              {/* Graphite layers */}
+              {[0, 1, 2, 3, 4].map((layer) => (
+                <rect
+                  key={layer}
+                  x={ANODE_X_START + 10}
+                  y={110 + layer * 30}
+                  width={ANODE_X_END - ANODE_X_START - 20}
+                  height="20"
+                  fill={colors.anodeGraphite}
+                  opacity={0.8}
+                />
+              ))}
+              {/* Lithium slots in graphite */}
+              {[0, 1, 2, 3, 4].map((layer) => {
+                const slots = 10;
+                const filledSlots = Math.floor(anodeLithiumFraction * slots);
+                return (
+                  <g key={layer}>
+                    {[...Array(slots)].map((_, slotIndex) => (
+                      <circle
+                        key={slotIndex}
+                        cx={
+                          ANODE_X_START +
+                          20 +
+                          (slotIndex * ((ANODE_X_END - ANODE_X_START - 40) / slots))
+                        }
+                        cy={120 + layer * 30}
+                        r="4"
+                        fill={
+                          slotIndex < filledSlots
+                            ? colors.lithiumIon
+                            : "none"
+                        }
+                        stroke={colors.lithiumIon}
+                        strokeWidth="1"
+                        opacity={slotIndex < filledSlots ? 1 : 0.3}
+                        filter={slotIndex < filledSlots ? "url(#glow)" : "none"}
+                      />
+                    ))}
+                  </g>
+                );
+              })}
+            </g>
+
+            {/* Separator Membrane */}
+            <rect
+              x={SEPARATOR_X_START}
+              y="50"
+              width={SEPARATOR_X_END - SEPARATOR_X_START}
+              height="280"
+              fill={colors.separator}
+            />
+            {/* Separator pores */}
+            <g>
+              {[0, 1, 2, 3, 4].map((row) => {
+                return (
+                  <g key={row}>
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((col) => (
+                      <circle
+                        key={`${row}-${col}`}
+                        cx={
+                          SEPARATOR_X_START +
+                          15 +
+                          col * ((SEPARATOR_X_END - SEPARATOR_X_START - 30) / 10)
+                        }
+                        cy={80 + row * 50}
+                        r="2"
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth="0.5"
+                        opacity={0.4}
+                      />
+                    ))}
+                  </g>
+                );
+              })}
+            </g>
+
+            {/* Cathode Structure (Metal Oxide Lattice) */}
+            <g>
+              {/* Aluminum current collector */}
+              <rect
+                x={CATHODE_X_START}
+                y="80"
+                width={CATHODE_X_END - CATHODE_X_START}
+                height="20"
+                fill={colors.cathodeAluminum}
+              />
+              {/* Oxide lattice */}
+              {[0, 1, 2].map((row) => (
+                <g key={row}>
+                  {[0, 1, 2, 3, 4].map((col) => (
+                    <circle
+                      key={`${row}-${col}`}
+                      cx={
+                        CATHODE_X_START +
+                        30 +
+                        col * ((CATHODE_X_END - CATHODE_X_START - 60) / 5)
+                      }
+                      cy={120 + row * 50}
+                      r="6"
+                      fill={colors.cathodeOxide}
+                      opacity={0.7}
+                    />
+                  ))}
+                </g>
+              ))}
+              {/* Interstitial sites for Li+ */}
+              {[0, 1, 2].map((row) => (
+                <g key={row}>
+                  {[0, 1, 2, 3, 4].map((col) => {
+                    const siteIndex = row * 5 + col;
+                    const totalSites = 15;
+                    const filledSites = Math.floor(
+                      cathodeLithiumFraction * totalSites
+                    );
+                    return (
+                      <circle
+                        key={`${row}-${col}`}
+                        cx={
+                          CATHODE_X_START +
+                          30 +
+                          col * ((CATHODE_X_END - CATHODE_X_START - 60) / 5)
+                        }
+                        cy={120 + row * 50}
+                        r="3"
+                        fill={
+                          siteIndex < filledSites
+                            ? colors.lithiumIon
+                            : "none"
+                        }
+                        stroke={colors.lithiumIon}
+                        strokeWidth="1"
+                        opacity={siteIndex < filledSites ? 1 : 0.2}
+                        filter={siteIndex < filledSites ? "url(#glow)" : "none"}
+                      />
+                    );
+                  })}
+                </g>
+              ))}
+            </g>
+
+            {/* Migrating Lithium Ions (in separator) */}
+            {[...Array(ION_COUNT)].map((_, index) => (
+              <circle
+                key={`li-ion-${index}`}
+                ref={(el) => (lithiumIonRefs.current[index] = el)}
+                cx={
+                  SEPARATOR_X_START +
+                  Math.random() * (SEPARATOR_X_END - SEPARATOR_X_START)
+                }
+                cy={ELECTROLYTE_Y}
+                r="5"
+                fill={colors.lithiumIon}
+                filter="url(#glow)"
+              />
+            ))}
+
+            {/* External Circuit and Electrons */}
+            {/* Left wire (anode to load) */}
+            <line
+              x1={ANODE_X_START}
+              y1={WIRE_Y}
+              x2={LOAD_CENTER_X - LOAD_WIDTH / 2}
+              y2={WIRE_Y}
+              stroke={colors.wire}
+              strokeWidth="2"
+            />
+            {/* Load (Bulb) */}
+            <circle
+              ref={bulbRef}
+              cx={LOAD_CENTER_X}
+              cy={WIRE_Y}
+              r={LOAD_WIDTH / 2}
+              fill="#facc15"
+              stroke="#fbbf24"
+              strokeWidth="2"
+            />
+            {/* Right wire (load to cathode) */}
+            <line
+              x1={LOAD_CENTER_X + LOAD_WIDTH / 2}
+              y1={WIRE_Y}
+              x2={CATHODE_X_START}
+              y2={WIRE_Y}
+              stroke={colors.wire}
+              strokeWidth="2"
+            />
+            {/* Plug (for charging) */}
+            <rect
+              ref={plugRef}
+              x={ANODE_X_START - 20}
+              y={WIRE_Y - 10}
+              width="20"
+              height="20"
+              fill="#64748b"
+            />
+            {/* SOC Gauge */}
+            <g ref={socGaugeRef}>
+              {/* Background */}
+              <rect
+                x="20"
+                y="60"
+                width="10"
+                height="260"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="1"
+              />
+              {/* Fill */}
+              <rect
+                x="20"
+                y={60 + (260 * (1 - soc / 100))}
+                width="10"
+                height={260 * (soc / 100)}
+                fill="url(#socGradient)"
+              />
+            </g>
+          </svg>
+        </div>
+
+        {/* Controls Panel */}
+        <div className="controls-panel" style={{ flex: "1", minWidth: "250px" }}>
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="soc"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              State of Charge ({soc}%)
+            </label>
+            <input
+              type="range"
+              id="soc"
+              min="0"
+              max="100"
+              value={soc}
+              onChange={(e) => setSoc(parseInt(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="cRate"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              C-Rate ({cRate.toFixed(1)}C)
+            </label>
+            <input
+              type="range"
+              id="cRate"
+              min="0.1"
+              max="5"
+              step="0.1"
+              value={cRate}
+              onChange={(e) => setCRate(parseFloat(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="capacity"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              Capacity ({capacity} mAh)
+            </label>
+            <input
+              type="range"
+              id="capacity"
+              min="1000"
+              max="5000"
+              step="100"
+              value={capacity}
+              onChange={(e) => setCapacity(parseInt(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="internalResistance"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              Internal Resistance ({internalResistance.toFixed(3)} Ω)
+            </label>
+            <input
+              type="range"
+              id="internalResistance"
+              min="0.01"
+              max="0.1"
+              step="0.001"
+              value={internalResistance}
+              onChange={(e) => setInternalResistance(parseFloat(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="ambientTemp"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              Ambient Temp ({ambientTemp}°C)
+            </label>
+            <input
+              type="range"
+              id="ambientTemp"
+              min="0"
+              max="50"
+              step="1"
+              value={ambientTemp}
+              onChange={(e) => setAmbientTemp(parseInt(e.target.value))}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              htmlFor="mode"
+              style={{ display: "block", marginBottom: "4px", color: "#94a3b8" }}
+            >
+              Mode: {mode === "discharge" ? "Discharge" : "Charge"}
+            </label>
+            <button
+              onClick={() => setMode(mode === "discharge" ? "charge" : "discharge")}
+              style={{
+                width: "100%",
+                padding: "8px",
+                backgroundColor: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              Switch Mode
+            </button>
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <button
+              onClick={togglePlay}
+              style={{
+                width: "100%",
+                padding: "8px",
+                backgroundColor: isPlaying ? "#10b981" : "#ef4444",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              {isPlaying ? "Pause" : "Play"}
+            </button>
+          </div>
+
+          <div className="control-group" style={{ marginBottom: "16px" }}>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94a3b8" }}
+            >
+              <input
+                type="checkbox"
+                checked={showElectronTrail}
+                onChange={(e) => setShowElectronTrail(e.target.checked)}
+              />
+              Show Electron Trail
+            </label>
+          </div>
+
+          <div className="control-group">
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "8px", color: "#94a3b8" }}
+            >
+              <input
+                type="checkbox"
+                checked={showGrid}
+                onChange={(e) => setShowGrid(e.target.checked)}
+              />
+              Show Grid
+            </label>
+          </div>
+
+          <div className="control-group" style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #334155" }}>
+            <button
+              onClick={resetBattery}
+              style={{
+                width: "100%",
+                padding: "10px",
+                backgroundColor: "#fbbf24",
+                color: "#0b0f19",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              Reset Battery
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Display */}
+      <div className="metrics" style={{ marginTop: "20px", padding: "16px", backgroundColor: "#1e293b", borderRadius: "8px" }}>
+        <h2 style={{ color: "#fbbf24", marginTop: "0" }}>Battery Metrics</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div>
+            <label style={{ display: "block", color: "#94a3b8", marginBottom: "4px" }}>Terminal Voltage</label>
+            <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{terminalVoltage.toFixed(2)} V</span>
+          </div>
+          <div>
+            <label style={{ display: "block", color: "#94a3b8", marginBottom: "4px" }}>Nominal Current</label>
+            <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{nominalCurrent.toFixed(2)} A</span>
+          </div>
+          <div>
+            <label style={{ display: "block", color: "#94a3b8", marginBottom: "4px" }}>Cell Power</label>
+            <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{cellPower.toFixed(1)} W</span>
+          </div>
+          <div>
+            <label style={{ display: "block", color: "#94a3b8", marginBottom: "4px" }}>Joule Heating</label>
+            <span style={{ fontSize: "1.2rem", fontWeight: "bold" }}>{jouleHeating.toFixed(1)} W</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

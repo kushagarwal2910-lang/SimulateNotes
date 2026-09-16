@@ -1,0 +1,235 @@
+{
+  "simulation_id": "rocket_propulsion_system",
+  "title": "Rocket Propulsion System: Thrust Generation and Momentum Conservation",
+  "topic": "Aerospace Engineering / Rocket Science",
+  "pedagogical_goal": "This simulation demonstrates how rocket engines generate thrust through the expulsion of high-velocity exhaust gases, illustrating Newton's Third Law and conservation of momentum in a vacuum. Users can adjust propellant flow rate, exhaust velocity, and chamber pressure to observe their impact on instantaneous thrust, rocket acceleration, and specific impulse, while visualizing the internal combustion process and nozzle dynamics.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Newton's Second Law: F = dp/dt (thrust equals rate of momentum change of exhaust)",
+      "Newton's Third Law: For every action (exhaust downward), there is an equal and opposite reaction (rocket upward)",
+      "Conservation of Linear Momentum: In an isolated system, total momentum remains constant (rocket momentum + exhaust momentum = 0)",
+      "Ideal Rocket Equation (Tsiolkovsky): \u0394v = v_e * ln(m_initial / m_final)",
+      "Thrust Equation: F = \u1e41 * v_e + (p_e - p_a) * A_e (simplified to F = \u1e41 * v_e in vacuum where p_e \u2248 p_a \u2248 0)"
+    ],
+    "variables": {
+      "propellant_flow_rate": {
+        "name": "Propellant Mass Flow Rate",
+        "default": 250.0,
+        "unit": "kg/s",
+        "min": 50.0,
+        "max": 500.0,
+        "step": 10.0
+      },
+      "exhaust_velocity": {
+        "name": "Exhaust Velocity",
+        "default": 3000.0,
+        "unit": "m/s",
+        "min": 2000.0,
+        "max": 4500.0,
+        "step": 50.0
+      },
+      "chamber_pressure": {
+        "name": "Combustion Chamber Pressure",
+        "default": 100.0,
+        "unit": "atm",
+        "min": 20.0,
+        "max": 200.0,
+        "step": 5.0
+      },
+      "nozzle_exit_area": {
+        "name": "Nozzle Exit Area",
+        "default": 1.5,
+        "unit": "m\u00b2",
+        "min": 0.5,
+        "max": 3.0,
+        "step": 0.1
+      },
+      "ambient_pressure": {
+        "name": "Ambient Pressure",
+        "default": 0.0,
+        "unit": "atm",
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.1
+      }
+    },
+    "derived_formulas": {
+      "instantaneous_thrust": "propellant_flow_rate * exhaust_velocity + (chamber_pressure * 101325 - ambient_pressure * 101325) * nozzle_exit_area",
+      "specific_impulse": "exhaust_velocity / 9.81",
+      "mass_flow_momentum": "propellant_flow_rate * exhaust_velocity",
+      "pressure_thrust_component": "(chamber_pressure * 101325 - ambient_pressure * 101325) * nozzle_exit_area",
+      "rocket_acceleration": "(propellant_flow_rate * exhaust_velocity + (chamber_pressure * 101325 - ambient_pressure * 101325) * nozzle_exit_area) / 100000"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Structural background grid pattern with faint isometric lines and vacuum chamber boundary markers (width: 960, height: 480). Includes subtle starfield texture to emphasize space environment."
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive closed outer rocket silhouette occupying 70% of viewport (approx. 672x336 area). Defined by complex Bezier path: M120 80 C180 40, 780 40, 840 80 L840 400 C780 440, 180 440, 120 400 Z representing the rocket fuselage with tapered nose and base."
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Volumetric combustion chamber and nozzle medium showing high-pressure gas plasma. Uses radialGradient from yellow-white (core) to deep orange (edges) with <filter id=\"glow\"> for intensity. Opacity and color shift dynamically with chamber_pressure and exhaust_velocity via reactive stops."
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 35 animated particles representing exhaust molecules. Emitted from nozzle throat with initial velocity based on exhaust_velocity, accelerated through nozzle, and expelled downward. Each particle has lifecycle: birth (ignition), acceleration (nozzle expansion), decay (dispersion in vacuum). Color transitions from white-hot to cool blue based on velocity magnitude."
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ HUD elements including: (1) Combustion chamber pressure gauge anchored at 20% width, 30% height, (2) Nozzle exit velocity vector field indicator at 50% width, 80% height, (3) Thrust vector arrow originating from rocket base, (4) Momentum conservation diagram showing rocket vs exhaust momentum vectors, (5) Specific impulse readout at 80% width, 20% height."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references including particle array and gradient elements",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate translation of exhaust particles along nozzle axis, scale of combustion glow based on pressure, rotation of turbopump icons (if added), and thrust vector magnitude",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5 for thrust, acceleration, and specific impulse displays"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_propellant_flow_rate",
+      "label": "Propellant Mass Flow Rate",
+      "param": "propellant_flow_rate",
+      "type": "slider",
+      "min": 50.0,
+      "max": 500.0,
+      "step": 10.0,
+      "unit": "kg/s"
+    },
+    {
+      "id": "slider_exhaust_velocity",
+      "label": "Exhaust Velocity",
+      "param": "exhaust_velocity",
+      "type": "slider",
+      "min": 2000.0,
+      "max": 4500.0,
+      "step": 50.0,
+      "unit": "m/s"
+    },
+    {
+      "id": "slider_chamber_pressure",
+      "label": "Combustion Chamber Pressure",
+      "param": "chamber_pressure",
+      "type": "slider",
+      "min": 20.0,
+      "max": 200.0,
+      "step": 5.0,
+      "unit": "atm"
+    },
+    {
+      "id": "slider_nozzle_exit_area",
+      "label": "Nozzle Exit Area",
+      "param": "nozzle_exit_area",
+      "type": "slider",
+      "min": 0.5,
+      "max": 3.0,
+      "step": 0.1,
+      "unit": "m\u00b2"
+    },
+    {
+      "id": "slider_ambient_pressure",
+      "label": "Ambient Pressure",
+      "param": "ambient_pressure",
+      "type": "slider",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.1,
+      "unit": "atm"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Instantaneous Thrust",
+      "formula": "instantaneous_thrust",
+      "unit": "N"
+    },
+    {
+      "label": "Specific Impulse",
+      "formula": "specific_impulse",
+      "unit": "s"
+    },
+    {
+      "label": "Mass Flow Momentum",
+      "formula": "mass_flow_momentum",
+      "unit": "N"
+    },
+    {
+      "label": "Pressure Thrust Component",
+      "formula": "pressure_thrust_component",
+      "unit": "N"
+    },
+    {
+      "label": "Rocket Acceleration",
+      "formula": "rocket_acceleration",
+      "unit": "m/s\u00b2"
+    },
+    {
+      "label": "Exhaust Momentum Rate",
+      "formula": "propellant_flow_rate * exhaust_velocity",
+      "unit": "N"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Ignition and Combustion",
+      "text": "Propellant and oxidizer mix in the combustion chamber, igniting to produce high-pressure, high-temperature gas. Chamber pressure drives the process."
+    },
+    {
+      "step": 2,
+      "title": "Nozzle Acceleration",
+      "text": "Hot gas expands through the de Laval nozzle, converting thermal energy to kinetic energy. Exhaust velocity increases as pressure drops, maximizing momentum transfer."
+    },
+    {
+      "step": 3,
+      "title": "Thrust Generation",
+      "text": "According to Newton's Third Law, the downward momentum of the exhaust creates an equal and opposite upward force on the rocket. Thrust depends on both mass flow rate and exhaust velocity."
+    },
+    {
+      "step": 4,
+      "title": "Momentum Conservation in Vacuum",
+      "text": "In space with no ambient pressure, thrust simplifies to F = \u1e41 * v_e. The rocket gains upward momentum exactly equal to the downward momentum of the exhaust, conserving total system momentum."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

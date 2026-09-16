@@ -1,0 +1,247 @@
+{
+  "simulation_id": "paper_factory_fourdrinier",
+  "title": "Fourdrinier Paper Machine Simulation",
+  "topic": "Pulp and Paper Manufacturing - Wet End Operations",
+  "pedagogical_goal": "This simulation demonstrates the core wet-end process of a Fourdrinier paper machine, where a dilute pulp suspension is transformed into a continuous wet web through drainage, formation, and initial consolidation on a moving wire mesh. Users will understand how key parameters like stock flow rate, wire speed, suction, and couch pressure affect web formation, moisture content, and the transition to the press section.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Mass Conservation: The rate of mass accumulation on the wire equals the inlet stock flow rate minus drainage rate through the wire.",
+      "Darcy's Law for Drainage: The volumetric flow rate of water through the wire and forming web is proportional to the pressure drop across the web and the wire's permeability, inversely proportional to web resistance.",
+      "Newtonian Fluid Flow: The stock jet velocity is determined by the pressure head and slice opening, governing impact and shear forces on the wire."
+    ],
+    "variables": {
+      "stock_flow_rate": {
+        "name": "Stock Flow Rate",
+        "default": 150,
+        "unit": "kg/min",
+        "min": 50,
+        "max": 300,
+        "step": 10
+      },
+      "wire_speed": {
+        "name": "Wire Speed",
+        "default": 20,
+        "unit": "m/min",
+        "min": 5,
+        "max": 50,
+        "step": 1
+      },
+      "slice_opening": {
+        "name": "Slice Opening",
+        "default": 2.0,
+        "unit": "mm",
+        "min": 0.5,
+        "max": 5.0,
+        "step": 0.1
+      },
+      "vacuum_level": {
+        "name": "Vacuum Level",
+        "default": 0.4,
+        "unit": "atm",
+        "min": 0.1,
+        "max": 0.8,
+        "step": 0.05
+      },
+      "couch_pressure": {
+        "name": "Couch Pressure",
+        "default": 150,
+        "unit": "kPa",
+        "min": 50,
+        "max": 300,
+        "step": 10
+      },
+      "stock_consistency": {
+        "name": "Stock Consistency",
+        "default": 0.4,
+        "unit": "%",
+        "min": 0.2,
+        "max": 0.8,
+        "step": 0.05
+      }
+    },
+    "derived_formulas": {
+      "jet_velocity": "Math.sqrt(2 * 9.81 * (slice_opening / 1000) * 1000) * 3.28084",
+      "drainage_rate": "stock_flow_rate * stock_consistency * vacuum_level * 0.01",
+      "web_moisture": "Math.max(70, 95 - (wire_speed * 0.3 + vacuum_level * 20 + couch_pressure * 0.1))",
+      "formation_index": "Math.min(100, 50 + (wire_speed * 1.2) + (vacuum_level * 30))",
+      "web_tension": "stock_flow_rate * 0.02 * wire_speed",
+      "suction_force": "vacuum_level * 101.325 * 0.5"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Structural background grid pattern and technical boundary benchmarks (width: 960, height: 480). Fine isometric grid lines at 20px intervals, subtle axis labels, and a faint paper texture overlay."
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive closed outer structural silhouette of the Fourdrinier machine frame, occupying >= 65% of viewport. Complex path representing the headbox, wire table, suction boxes, couch roll, and initial press section, constructed with multiple Bezier curves for a realistic industrial machine profile."
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Volumetric filled medium representing the stock jet, forming web, and wet web. Uses a linear gradient that transitions from translucent slurry (light grey-blue) at the headbox to opaque wet web (off-white) as it moves along the wire. Opacity and color saturation dynamically adjust based on web_moisture and formation_index via CSS filters."
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 35 animated entities. Includes: 10 fibers (white, varying length) showing orientation and entrainment in the stock jet; 15 water droplets (blue, semi-transparent) draining through the wire; 5 wire markers (black dots) moving at wire_speed to visualize wire travel; 5 couch roll nip indicators (small rectangles) showing compression; and a rotating headbox slice lip."
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ labels and dynamic readouts. Includes: a badge near the headbox showing 'Jet Velocity: [jet_velocity] m/s'; a badge over the wire table showing 'Formation: [formation_index]%' ; a badge at the suction boxes showing 'Drainage: [drainage_rate] kg/min'; a badge at the couch roll showing 'Web Moisture: [web_moisture]%'; and a small valve icon near the headbox whose opacity reflects slice_opening."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate rotation for motors/rollers (headbox slice, couch roll, wire drive roll), translation for conveyors/drift (wire travel, stock jet impingement, water drainage), and scaleX/scaleY for morphological changes (web thickening/thinning, fiber alignment)",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_stock_flow_rate",
+      "label": "Stock Flow Rate",
+      "param": "stock_flow_rate",
+      "type": "slider",
+      "min": 50,
+      "max": 300,
+      "step": 10,
+      "unit": "kg/min"
+    },
+    {
+      "id": "slider_wire_speed",
+      "label": "Wire Speed",
+      "param": "wire_speed",
+      "type": "slider",
+      "min": 5,
+      "max": 50,
+      "step": 1,
+      "unit": "m/min"
+    },
+    {
+      "id": "slider_slice_opening",
+      "label": "Slice Opening",
+      "param": "slice_opening",
+      "type": "slider",
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.1,
+      "unit": "mm"
+    },
+    {
+      "id": "slider_vacuum_level",
+      "label": "Vacuum Level",
+      "param": "vacuum_level",
+      "type": "slider",
+      "min": 0.1,
+      "max": 0.8,
+      "step": 0.05,
+      "unit": "atm"
+    },
+    {
+      "id": "slider_couch_pressure",
+      "label": "Couch Pressure",
+      "param": "couch_pressure",
+      "type": "slider",
+      "min": 50,
+      "max": 300,
+      "step": 10,
+      "unit": "kPa"
+    },
+    {
+      "id": "slider_stock_consistency",
+      "label": "Stock Consistency",
+      "param": "stock_consistency",
+      "type": "slider",
+      "min": 0.2,
+      "max": 0.8,
+      "step": 0.05,
+      "unit": "%"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Jet Velocity",
+      "formula": "jet_velocity",
+      "unit": "ft/s"
+    },
+    {
+      "label": "Drainage Rate",
+      "formula": "drainage_rate",
+      "unit": "kg/min"
+    },
+    {
+      "label": "Web Moisture",
+      "formula": "web_moisture",
+      "unit": "%"
+    },
+    {
+      "label": "Formation Index",
+      "formula": "formation_index",
+      "unit": "a.u."
+    },
+    {
+      "label": "Web Tension",
+      "formula": "web_tension",
+      "unit": "N"
+    },
+    {
+      "label": "Suction Force",
+      "formula": "suction_force",
+      "unit": "kPa"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Stock Jet Impact",
+      "text": "The stock jet emerges from the headbox slice and impacts the moving wire. Jet velocity, determined by slice opening and stock consistency, governs fiber alignment and initial shear forces. Too high a velocity causes fiber damage and poor formation; too low leads to uneven distribution."
+    },
+    {
+      "step": 2,
+      "title": "Drainage and Formation",
+      "text": "As the stock travels on the wire, vacuum boxes apply suction, removing water through the forming web. Drainage rate depends on vacuum level, web permeability, and stock consistency. Formation index reflects the uniformity of the fiber network, improved by optimal drainage and wire speed."
+    },
+    {
+      "step": 3,
+      "title": "Web Consolidation at Couch",
+      "text": "The wet web is transferred from the wire to the felt via the couch roll nip. Couch pressure squeezes out additional water, reducing web moisture before the press section. Balanced pressure is critical: insufficient pressure leaves the web too wet for pressing; excessive pressure causes fiber damage and web tearing."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

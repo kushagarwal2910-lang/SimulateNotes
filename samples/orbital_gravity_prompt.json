@@ -1,0 +1,135 @@
+{
+  "simulation_id": "gravitational_orbit_mechanics",
+  "title": "Orbital Mechanics: Kepler's Laws & Gravitational Escape Dynamics",
+  "topic": "Astrophysics & Classical Gravitation",
+  "pedagogical_goal": "Demonstrate how a planet orbits a central star, showing conservation of angular momentum (equal areas swept in equal times), velocity changes at periapsis vs apoapsis, and escape velocity threshold.",
+  "physics_model": {
+    "conservation_laws": [
+      "Newton's Law of Universal Gravitation: F = G * M * m / r^2",
+      "Conservation of Angular Momentum: L = m * r * v_perp = Constant",
+      "Vis-Viva Equation: v^2 = G * M * (2/r - 1/a)",
+      "Escape Velocity: v_esc = sqrt(2 * G * M / r)"
+    ],
+    "variables": {
+      "star_mass": {"name": "Central Star Mass", "default": 1.0, "unit": "M_sun", "min": 0.5, "max": 3.0},
+      "initial_distance": {"name": "Initial Orbital Radius", "default": 200, "unit": "AU (scaled)", "min": 100, "max": 320},
+      "initial_velocity": {"name": "Initial Tangential Velocity", "default": 4.5, "unit": "km/s (scaled)", "min": 1.5, "max": 8.0},
+      "eccentricity": {"name": "Orbital Eccentricity (e)", "default": 0.45, "unit": "ratio", "min": 0.0, "max": 0.85},
+      "trail_length": {"name": "Particle Trail Length", "default": 80, "unit": "points", "min": 20, "max": 150}
+    },
+    "derived_formulas": {
+      "semi_major_axis": "initial_distance / (1 - eccentricity)",
+      "semi_minor_axis": "semi_major_axis * sqrt(1 - eccentricity^2)",
+      "periapsis_r": "semi_major_axis * (1 - eccentricity)",
+      "apoapsis_r": "semi_major_axis * (1 + eccentricity)",
+      "v_periapsis": "sqrt(G * M * (1 + eccentricity) / (semi_major_axis * (1 - eccentricity)))",
+      "v_apoapsis": "sqrt(G * M * (1 - eccentricity) / (semi_major_axis * (1 + eccentricity)))",
+      "escape_speed": "sqrt(2 * G * M / periapsis_r)"
+    }
+  },
+  "visual_scene": {
+    "theme": "deep_space_observatory",
+    "background": "#070913",
+    "accent_colors": {
+      "star_core": "#fbbf24",
+      "star_glow": "rgba(245, 158, 11, 0.4)",
+      "orbit_path": "rgba(96, 165, 250, 0.25)",
+      "planet_core": "#38bdf8",
+      "velocity_vector": "#34d399",
+      "gravity_vector": "#f87171",
+      "particle_trail": "#60a5fa"
+    },
+    "components": [
+      {
+        "id": "stellar_core",
+        "type": "SVG_radial_gradient_sun",
+        "description": "Central star located at the focal point of the elliptical orbit, with radiant multi-layer corona pulse."
+      },
+      {
+        "id": "kepler_orbit_ellipse",
+        "type": "SVG_path",
+        "description": "Precise mathematical ellipse showing the orbital trajectory with dashed grid markings."
+      },
+      {
+        "id": "orbiting_body_with_trail",
+        "type": "gsap_ticker_animated_body",
+        "description": "Planet orbiting according to Kepler's 2nd Law (moving fastest at periapsis and slowest at apoapsis), leaving a glowing fading particle tail."
+      },
+      {
+        "id": "vector_overlays",
+        "type": "dynamic_vectors",
+        "description": "Real-time velocity vector (tangent to orbit) and gravitational acceleration vector (pointing directly at central star)."
+      },
+      {
+        "id": "energy_spectrum_indicator",
+        "type": "live_gauge",
+        "description": "Kinetic Energy vs Gravitational Potential Energy exchange showing negative total mechanical energy for bound orbits."
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "mass_slider",
+      "label": "Star Mass (M)",
+      "param": "star_mass",
+      "type": "slider",
+      "min": 0.5,
+      "max": 3.0,
+      "step": 0.1
+    },
+    {
+      "id": "eccentricity_slider",
+      "label": "Orbital Eccentricity (e)",
+      "param": "eccentricity",
+      "type": "slider",
+      "min": 0.0,
+      "max": 0.85,
+      "step": 0.05
+    },
+    {
+      "id": "velocity_slider",
+      "label": "Tangential Velocity",
+      "param": "initial_velocity",
+      "type": "slider",
+      "min": 1.5,
+      "max": 8.0,
+      "step": 0.2
+    },
+    {
+      "id": "playback_controls",
+      "buttons": ["Play / Pause", "Reset Orbit", "Toggle Vectors", "Toggle Energy Gauge"]
+    }
+  ],
+  "telemetry_metrics": [
+    {"label": "Current Velocity", "formula": "v(t)", "unit": "km/s"},
+    {"label": "Distance to Star (r)", "formula": "r(t)", "unit": "AU"},
+    {"label": "Orbital Period (T)", "formula": "2*pi*sqrt(a^3/(G*M))", "unit": "Earth Years"},
+    {"label": "Periapsis Speed", "formula": "v_peri", "unit": "km/s"},
+    {"label": "Apoapsis Speed", "formula": "v_apo", "unit": "km/s"},
+    {"label": "Escape Threshold", "formula": "v_esc", "unit": "km/s"}
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "1. Kepler's First Law",
+      "text": "Planets move in elliptical orbits with the central star situated at one of the two foci, not at the center."
+    },
+    {
+      "step": 2,
+      "title": "2. Equal Areas in Equal Times",
+      "text": "As the planet nears periapsis (closest approach), gravitational pull intensifies, accelerating the planet to maximum speed."
+    },
+    {
+      "step": 3,
+      "title": "3. The Escape Boundary",
+      "text": "If tangential speed exceeds the escape velocity threshold, total mechanical energy becomes positive, transforming the ellipse into a hyperbolic escape trajectory!"
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Modern dark observatory aesthetic",
+    "self_contained": true,
+    "component_export": "export default function OrbitalGravitySimulation()"
+  }
+}

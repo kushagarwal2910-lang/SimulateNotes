@@ -1,0 +1,234 @@
+{
+  "simulation_id": "photoelectric_effect_simulation",
+  "title": "Interactive Photoelectric Effect: Photon Energy, Work Function, and Electron Emission",
+  "topic": "Quantum Physics / Photoelectric Effect",
+  "pedagogical_goal": "Explore how photon frequency and intensity affect electron emission from a metal surface, visualize Einstein's photoelectric equation (K_max = h\u03bd - \u03c6), and understand the threshold frequency concept through interactive sliders and real-time kinetic energy calculations.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Einstein's Photoelectric Equation: K_max = h\u03bd - \u03c6, where K_max is maximum kinetic energy of emitted electrons, h is Planck's constant, \u03bd is photon frequency, and \u03c6 is work function of the metal",
+      "Photon Energy: E_photon = h\u03bd = hc/\u03bb, where c is speed of light and \u03bb is wavelength",
+      "Threshold Condition: Photoelectric emission occurs only when \u03bd \u2265 \u03bd\u2080 (threshold frequency) or equivalently \u03bb \u2264 \u03bb\u2080 (threshold wavelength)",
+      "Electron Current Proportionality: Number of photoelectrons per second (and thus photocurrent) is proportional to light intensity for \u03bd > \u03bd\u2080"
+    ],
+    "variables": {
+      "wavelength": {
+        "name": "Incident Light Wavelength",
+        "default": 400,
+        "unit": "nm",
+        "min": 200,
+        "max": 700,
+        "step": 1
+      },
+      "intensity": {
+        "name": "Light Intensity",
+        "default": 50,
+        "unit": "arb. units",
+        "min": 0,
+        "max": 100,
+        "step": 1
+      },
+      "work_function": {
+        "name": "Metal Work Function",
+        "default": 2.3,
+        "unit": "eV",
+        "min": 1.0,
+        "max": 5.0,
+        "step": 0.1
+      },
+      "planck_constant": {
+        "name": "Planck's Constant",
+        "default": 4.135667662e-15,
+        "unit": "eV\u00b7s",
+        "min": 4.135667662e-15,
+        "max": 4.135667662e-15,
+        "step": 0
+      },
+      "speed_of_light": {
+        "name": "Speed of Light",
+        "default": 299792458.0,
+        "unit": "m/s",
+        "min": 299792458.0,
+        "max": 299792458.0,
+        "step": 0
+      },
+      "electron_charge": {
+        "name": "Elementary Charge",
+        "default": 1.602176634e-19,
+        "unit": "C",
+        "min": 1.602176634e-19,
+        "max": 1.602176634e-19,
+        "step": 0
+      }
+    },
+    "derived_formulas": {
+      "photon_energy_eV": "(planck_constant * speed_of_light * 1e9) / wavelength",
+      "threshold_wavelength_nm": "(planck_constant * speed_of_light * 1e9) / work_function",
+      "max_kinetic_energy_eV": "Math.max(0, photon_energy_eV - work_function)",
+      "photoelectron_rate": "intensity * (photon_energy_eV > work_function ? 1 : 0)",
+      "stopping_potential_volts": "max_kinetic_energy_eV",
+      "photon_energy_joules": "photon_energy_eV * electron_charge",
+      "max_kinetic_energy_joules": "max_kinetic_energy_eV * electron_charge"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Structural background grid pattern with subtle hexagonal lattice (representing metal crystal structure) and technical boundary benchmarks (width: 960, height: 480). Includes faint coordinate axes and measurement markings."
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive closed outer structural silhouette of a vacuum phototube occupying >= 65% of viewport area. Features a cylindrical glass envelope with metal cathode (photoemissive surface) on left and anode on right, connected to external circuit. Path uses multi-point Bezier coordinates for realistic tube shape.",
+        "path_data": "M 100 120 C 100 80, 200 80, 200 120 L 760 120 C 760 80, 860 80, 860 120 L 860 360 C 860 400, 760 400, 760 360 L 200 360 C 200 400, 100 400, 100 360 Z"
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Volumetric filled medium representing photon flux (left to right) and electron cloud near cathode. Uses linear gradient for photon beam intensity that changes opacity and color based on intensity variable, and radial gradient for electron emission zone that expands with photoelectron rate. Includes glow filter that pulses with emission events.",
+        "gradient_definitions": [
+          "<linearGradient id=\"photonGradient\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\"> <stop offset=\"0%\" stop-color=\"#38bdf8\" stop-opacity=\"0.6\"/> <stop offset=\"100%\" stop-color=\"#38bdf8\" stop-opacity=\"0.0\"/> </linearGradient>",
+          "<radialGradient id=\"electronGradient\" cx=\"50%\" cy=\"50%\" r=\"50%\"> <stop offset=\"0%\" stop-color=\"#f43f5e\" stop-opacity=\"0.8\"/> <stop offset=\"100%\" stop-color=\"#f43f5e\" stop-opacity=\"0.0\"/> </radialGradient>"
+        ],
+        "filter_definition": "<filter id=\"emissionGlow\"><feGaussianBlur stdDeviation=\"3\" result=\"coloredBlur\"/><feMerge><feMergeNode in=\"coloredBlur\"/><feMergeNode in=\"SourceGraphic\"/></feMerge></filter>"
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 30 animated entities - 15 photon particles (blue spheres) moving left to right at constant speed, and up to 15 photoelectron particles (red spheres) emitted from cathode surface when photon energy exceeds work function. Electrons are accelerated toward anode by electric field, with velocity proportional to sqrt(max_kinetic_energy).",
+        "particle_counts": {
+          "photons": 15,
+          "max_electrons": 15
+        }
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ labels and dynamic readouts directly on the visual stage: (1) Photon energy badge near photon beam, (2) Work function annotation on cathode surface, (3) Stopping potential meter between electrodes, (4) Kinetic energy display near anode, (5) Threshold wavelength marker on spectrum scale."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate translation for photon/electron particles, scale for pulse effects on emission",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "wavelength_slider",
+      "label": "Wavelength (nm)",
+      "param": "wavelength",
+      "type": "slider",
+      "min": 200,
+      "max": 700,
+      "step": 1,
+      "unit": "nm"
+    },
+    {
+      "id": "intensity_slider",
+      "label": "Intensity",
+      "param": "intensity",
+      "type": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "arb. units"
+    },
+    {
+      "id": "work_function_slider",
+      "label": "Work Function (eV)",
+      "param": "work_function",
+      "type": "slider",
+      "min": 1.0,
+      "max": 5.0,
+      "step": 0.1,
+      "unit": "eV"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Photon Energy",
+      "formula": "photon_energy_eV",
+      "unit": "eV"
+    },
+    {
+      "label": "Max Kinetic Energy",
+      "formula": "max_kinetic_energy_eV",
+      "unit": "eV"
+    },
+    {
+      "label": "Stopping Potential",
+      "formula": "stopping_potential_volts",
+      "unit": "V"
+    },
+    {
+      "label": "Photoelectron Rate",
+      "formula": "photoelectron_rate",
+      "unit": "arb. units/s"
+    },
+    {
+      "label": "Threshold Wavelength",
+      "formula": "threshold_wavelength_nm",
+      "unit": "nm"
+    },
+    {
+      "label": "Emission Status",
+      "formula": "photon_energy_eV > work_function ? 1 : 0",
+      "unit": "boolean"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Photon Absorption",
+      "text": "Incoming photons strike the metal surface. Only photons with energy exceeding the work function (E_photon > \u03c6) can eject electrons."
+    },
+    {
+      "step": 2,
+      "title": "Electron Emission & Kinetic Energy",
+      "text": "Ejected electrons gain kinetic energy equal to the excess photon energy: K.E. = h\u03bd - \u03c6. This kinetic energy determines their speed toward the anode."
+    },
+    {
+      "step": 3,
+      "title": "Intensity vs. Frequency Effects",
+      "text": "Increasing light intensity increases the NUMBER of emitted electrons (brightness of beam) but does NOT change their kinetic energy. Increasing frequency (decreasing wavelength) increases the ENERGY of each emitted electron."
+    },
+    {
+      "step": 4,
+      "title": "Threshold Frequency Concept",
+      "text": "Below a critical threshold frequency (or above threshold wavelength), no electrons are emitted regardless of light intensity. This demonstrates the particle nature of light and contradicts classical wave theory predictions."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

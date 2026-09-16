@@ -1,0 +1,135 @@
+{
+  "simulation_id": "neuroscience_stress_brain_anatomy",
+  "title": "Physical Neuro-Anatomy & Cellular Stress Remodeling Simulation",
+  "domain": "Neuro-Endocrinology, Brain Anatomy & Synaptic Neuroplasticity",
+  "render_mode": "svg_2d",
+  "description": "An interactive physical and cellular neuroscience simulation exploring how acute and chronic psychological stress physically remodel brain structures: HPA axis hormonal release, Amygdala hypertrophy, Prefrontal Cortex dendritic spine atrophy, and Hippocampal neurogenesis suppression.",
+  "biological_model": {
+    "variables": {
+      "stress_duration_months": 6,
+      "stressor_intensity_pct": 75,
+      "mindfulness_vagal_intervention": false,
+      "exercise_bdnf_boost": false
+    },
+    "derived_formulas": {
+      "serum_cortisol_ug_dl": "10 + 32 * (stressor_intensity_pct / 100) * (mindfulness_vagal_intervention ? 0.55 : 1.0)",
+      "pfc_synaptic_spine_density_pct": "Math.max(35, 100 - 4.8 * stress_duration_months * (stressor_intensity_pct / 100) + (exercise_bdnf_boost ? 14 : 0))",
+      "amygdala_hyperactivity_multiplier": "1.0 + 0.16 * stress_duration_months + 1.1 * (stressor_intensity_pct / 100)",
+      "hippocampus_volume_retention_pct": "Math.max(72, 100 - 2.6 * stress_duration_months * (stressor_intensity_pct / 100) + (exercise_bdnf_boost ? 8 : 0))",
+      "hpa_negative_feedback_efficacy_pct": "Math.max(18, 100 - 6.2 * stress_duration_months)",
+      "resting_heart_rate_bpm": "68 + 48 * (stressor_intensity_pct / 100) * (stress_duration_months < 1 ? 1.0 : 0.5) - (mindfulness_vagal_intervention ? 16 : 0)",
+      "neurogenesis_rate_cells_day": "Math.max(150, 1000 - 70 * stress_duration_months + (exercise_bdnf_boost ? 350 : 0))"
+    }
+  },
+  "visual_scene": {
+    "viewBox": "0 0 940 450",
+    "components": [
+      {
+        "id": "sagittal_brain_cross_section",
+        "description": "Cross-sectional anatomical map of the human brain highlighting five distinct structures: Prefrontal Cortex (PFC), Hypothalamus, Pituitary Gland, Amygdala, and Hippocampus with dynamic neural pathways and color-coded stress activity."
+      },
+      {
+        "id": "hpa_axis_endocrine_stream",
+        "description": "Animated hormonal particle stream: CRH peptides flowing from Hypothalamus to Pituitary, ACTH circulating via bloodstream to Adrenal glands, and Cortisol flooding back into brain tissue across the blood-brain barrier."
+      },
+      {
+        "id": "cellular_dendritic_spine_inset",
+        "description": "High-magnification circular inset showing a prefrontal pyramidal neuron dendritic branch with mushroom and thin dendritic spines visibly retracting and dying off under chronic high cortisol."
+      },
+      {
+        "id": "neurochemical_balance_gauges",
+        "description": "Comparative bar meters displaying Cortisol vs BDNF (Brain-Derived Neurotrophic Factor) and sympathetic vs parasympathetic vagal tone."
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "stress_duration_months",
+      "label": "Stress Exposure Duration",
+      "type": "slider",
+      "min": 0,
+      "max": 12,
+      "step": 1,
+      "default": 6,
+      "unit": "Months (0 = Acute 15 min, 12 = Chronic 1 Year)"
+    },
+    {
+      "id": "stressor_intensity_pct",
+      "label": "Stressor / Threat Intensity",
+      "type": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 75,
+      "unit": "% Severity"
+    },
+    {
+      "id": "mindfulness_vagal_intervention",
+      "label": "Mindfulness & Deep Vagal Breathing",
+      "type": "toggle",
+      "default": false
+    },
+    {
+      "id": "exercise_bdnf_boost",
+      "label": "Aerobic Exercise (BDNF Neurogenesis)",
+      "type": "toggle",
+      "default": false
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "serum_cortisol",
+      "label": "Serum Cortisol Level",
+      "unit": "μg/dL",
+      "precision": 1
+    },
+    {
+      "id": "pfc_density",
+      "label": "Prefrontal Synaptic Density",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "id": "amygdala_activity",
+      "label": "Amygdala Hyperactivity",
+      "unit": "x Baseline",
+      "precision": 2
+    },
+    {
+      "id": "hippocampus_volume",
+      "label": "Hippocampus Volume Retention",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "id": "hpa_feedback",
+      "label": "HPA Negative Feedback Loop",
+      "unit": "% Efficacy",
+      "precision": 0
+    },
+    {
+      "id": "heart_rate",
+      "label": "Resting Heart Rate",
+      "unit": "BPM",
+      "precision": 0
+    }
+  ],
+  "educational_cards": [
+    {
+      "title": "The HPA Axis: Threat Detection to Hormonal Flood",
+      "content": "When sensory cortices detect a threat, the Amygdala signals the Hypothalamus to release Corticotropin-Releasing Hormone (CRH). This triggers the Anterior Pituitary to secrete ACTH into the blood, causing the adrenal cortex to produce Cortisol and Adrenaline, preparing the body for fight-or-flight."
+    },
+    {
+      "title": "Prefrontal Cortex Atrophy & Executive Dysfunction",
+      "content": "The Prefrontal Cortex (PFC) governs working memory, decision-making, and impulse control. Chronic cortisol floods cause dendritic spine retraction and synaptic pruning in PFC pyramidal neurons, resulting in brain fog, cognitive rigidity, and impaired emotional regulation."
+    },
+    {
+      "title": "Amygdala Hypertrophy: The Fear Feedback Loop",
+      "content": "Unlike the PFC and Hippocampus which shrink, neurons in the Basolateral Amygdala undergo dendritic hypertrophy—sprouting new connections and growing larger under chronic stress. This locks the individual into a perpetual state of hyper-vigilance, panic, and anxiety."
+    },
+    {
+      "title": "Hippocampal Glucocorticoid Toxicity & Neurogenesis",
+      "content": "The Hippocampus contains the highest concentration of glucocorticoid receptors and serves as the 'brake' that signals the hypothalamus to shut off cortisol. Chronic cortisol damages CA3 neurons and suppresses new neuron generation (neurogenesis) in the dentate gyrus, breaking the brake and locking the HPA axis on."
+    }
+  ]
+}

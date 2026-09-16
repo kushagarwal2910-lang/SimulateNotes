@@ -1,0 +1,197 @@
+{
+  "simulation_id": "doppler_effect_sound_source_motion",
+  "title": "Doppler Effect: Moving Sound Source and Observed Frequency Shift",
+  "topic": "Wave Physics - Acoustics and Relative Motion",
+  "pedagogical_goal": "Visualize and quantify how the motion of a sound source relative to a stationary observer compresses or stretches sound waves, leading to observable increases (blueshift) or decreases (redshift) in perceived frequency, while reinforcing that wave speed in the medium remains constant.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Observed frequency: f' = f * (v / (v \u2213 vs)), where upper sign (-) is for source approaching observer, lower sign (+) for receding.",
+      "Wavelength shift: \u03bb' = \u03bb * (v \u2213 vs) / v, with same sign convention.",
+      "Wave speed invariance: v = f\u03bb = f'\u03bb' (constant in medium)."
+    ],
+    "variables": {
+      "source_frequency": {
+        "name": "Source Frequency (fs)",
+        "default": 440,
+        "unit": "Hz",
+        "min": 100,
+        "max": 1000,
+        "step": 10
+      },
+      "sound_speed": {
+        "name": "Speed of Sound in Medium (v)",
+        "default": 343,
+        "unit": "m/s",
+        "min": 300,
+        "max": 350,
+        "step": 1
+      },
+      "source_velocity": {
+        "name": "Source Speed vs (positive = toward observer)",
+        "default": 0,
+        "unit": "m/s",
+        "min": -50,
+        "max": 50,
+        "step": 1
+      }
+    },
+    "derived_formulas": {
+      "observed_frequency": "source_frequency * (sound_speed / (sound_speed - source_velocity))",
+      "wavelength_original": "sound_speed / source_frequency",
+      "wavelength_observed": "(sound_speed - source_velocity) / source_frequency",
+      "wave_speed_check": "observed_frequency * wavelength_observed"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "sound_source",
+        "type": "SVG_path",
+        "description": "A trapezoidal sound source (speaker-like) emitting concentric circular wavefronts. Positioned at x=200, y=240. When source_velocity > 0 (moving right/toward observer), wavefronts are compressed on the right (observer side) and expanded on the left. Path: M 180 220 l 40 0 l 20 20 l -40 0 z. Wavefronts are dashed circles with radius increasing over time, spaced according to wavelength_observed on right and wavelength_original on left."
+      },
+      {
+        "id": "stationary_observer",
+        "type": "SVG_circle",
+        "description": "A filled circle representing the observer's ear at x=800, y=240, radius 12, fill accent color. Receives wavefronts; the frequency of arrival is visualized by a pulsating glow (gsap) matching observed_frequency."
+      },
+      {
+        "id": "wavefronts",
+        "type": "SVG_path",
+        "description": "Series of 8 concentric semicircular arcs (only right half shown for clarity) emanating from the sound source. Each arc is a path segment of a circle with radii: n * wavelength_observed (if source moving toward observer) or n * wavelength_original (if moving away). Arcs are stroked with primary color, stroke-width 2, dash-array simulating compression/expansion. Dynamically regenerated based on source_velocity and source_frequency."
+      },
+      {
+        "id": "compression_indicator",
+        "type": "SVG_line",
+        "description": "A double-headed arrow above the wavefronts showing wavelength. Left side: original wavelength (\u03bb0). Right side: observed wavelength (\u03bb'). Length scales with calculated values. Label shows numeric values. Updates in real-time."
+      },
+      {
+        "id": "frequency_waves",
+        "type": "SVG_path",
+        "description": "A sinusoidal wave (y = A * sin(2\u03c0 * f' * t)) propagating from source to observer, representing pressure variation. Amplitude 20px, frequency tied to observed_frequency. Drawn as a thin stroke path with glow effect. Demonstrates how more wave cycles fit in same distance when source approaches."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references (sound_source, wavefronts, observer_glow, frequency_waves)",
+      "Use gsap.context() inside useEffect for cleanup",
+      "Animate wavefront expansion using gsap.to() on a custom 'waveRadius' variable (0 to 400) with repeat: -1, ease: 'none'",
+      "Pulse observer glow with gsap.to() scaling fill opacity and filter: drop-shadow, duration = 1 / observed_frequency, repeat: -1, yoyo: true",
+      "Animate frequency_waves path drawing using stroke-dashoffset with gsap.to() over duration of one period",
+      "Smoothly tween reactive state changes (source_velocity, source_frequency) using gsap.to(vars, {duration: 0.5})"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_source_freq",
+      "label": "Source Frequency (fs)",
+      "param": "source_frequency",
+      "type": "slider",
+      "min": 100,
+      "max": 1000,
+      "step": 10,
+      "unit": "Hz"
+    },
+    {
+      "id": "slider_sound_speed",
+      "label": "Speed of Sound (v)",
+      "param": "sound_speed",
+      "type": "slider",
+      "min": 300,
+      "max": 350,
+      "step": 1,
+      "unit": "m/s"
+    },
+    {
+      "id": "slider_source_velocity",
+      "label": "Source Velocity (vs, + = toward observer)",
+      "param": "source_velocity",
+      "type": "slider",
+      "min": -50,
+      "max": 50,
+      "step": 1,
+      "unit": "m/s"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Observed Frequency (f')",
+      "formula": "observed_frequency",
+      "unit": "Hz"
+    },
+    {
+      "label": "Original Wavelength (\u03bb0)",
+      "formula": "wavelength_original",
+      "unit": "m"
+    },
+    {
+      "label": "Observed Wavelength (\u03bb')",
+      "formula": "wavelength_observed",
+      "unit": "m"
+    },
+    {
+      "label": "Wave Speed Check (f'\u03bb')",
+      "formula": "wave_speed_check",
+      "unit": "m/s"
+    },
+    {
+      "label": "Frequency Shift \u0394f",
+      "formula": "observed_frequency - source_frequency",
+      "unit": "Hz"
+    },
+    {
+      "label": "Wavelength Compression Ratio",
+      "formula": "wavelength_observed / wavelength_original",
+      "unit": "ratio"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Stationary Source: Symmetric Wavefronts",
+      "text": "When the sound source is stationary (vs = 0), wavefronts are evenly spaced circles. The observer detects the same frequency as the source. Wavelength and frequency obey v = f\u03bb."
+    },
+    {
+      "step": 2,
+      "title": "Source Moving Toward Observer: Wavefront Compression",
+      "text": "As the source moves toward the observer, each successive wavefront is emitted from a position closer to the observer. This compresses the wavelength in front of the source (increasing observed frequency) and stretches it behind (decreasing frequency behind)."
+    },
+    {
+      "step": 3,
+      "title": "Observer Perspective: Higher Pitch Detected",
+      "text": "The stationary observer encounters wavefronts more frequently due to the reduced spacing (\u03bb' < \u03bb). This results in a higher perceived pitch (blueshift). The wave speed in the medium remains unchanged."
+    },
+    {
+      "step": 4,
+      "title": "Source Moving Away: Wavefront Stretch and Redshift",
+      "text": "When the source recedes, wavefronts are stretched behind it (\u03bb' > \u03bb), leading to fewer wavefronts reaching the observer per second\u2014a lower perceived pitch (redshift). The Doppler formula adjusts sign accordingly."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

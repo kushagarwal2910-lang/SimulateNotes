@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rocket Propulsion System: Thrust Generation and Momentum Conservation</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 3 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Three.js & OrbitControls for 3D WebGL Scenes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="error-container"></div>
+  <script>
+    // Global uncaught error display
+    window.addEventListener('error', function(event) {
+      console.error('Global Window Error:', event);
+      var errBox = document.getElementById('error-container');
+      if (errBox) {
+        var msg = event.message || (event.error && event.error.message) || 'Unknown error';
+        var stack = (event.error && event.error.stack) || (event.filename + ':' + event.lineno);
+        errBox.innerHTML = '<div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">' +
+          '<h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Runtime Error</h2>' +
+          '<p><strong>Error:</strong> ' + msg + '</p>' +
+          '<pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">' + stack + '</pre>' +
+          '</div>';
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const sourceCode = "\n\n\nfunction RocketPropulsionSystemSimulation() {\n  const [propellantFlowRate, setPropellantFlowRate] = useState(250.0);\n  const [exhaustVelocity, setExhaustVelocity] = useState(3000.0);\n  const [chamberPressure, setChamberPressure] = useState(100.0);\n  const [nozzleExitArea, setNozzleExitArea] = useState(1.5);\n  const [ambientPressure, setAmbientPressure] = useState(0.0);\n  const [isPlaying, setIsPlaying] = useState(true);\n  const particleRefs = useRef([]);\n  const gradientRef = useRef();\n  const rocketPathRef = useRef();\n\n  const instantaneousThrust = useMemo(() => {\n    const pressureDiffPa = (chamberPressure - ambientPressure) * 101325;\n    return propellantFlowRate * exhaustVelocity + pressureDiffPa * nozzleExitArea;\n  }, [propellantFlowRate, exhaustVelocity, chamberPressure, ambientPressure, nozzleExitArea]);\n\n  const specificImpulse = useMemo(() => exhaustVelocity / 9.81, [exhaustVelocity]);\n  const massFlowMomentum = useMemo(() => propellantFlowRate * exhaustVelocity, [propellantFlowRate, exhaustVelocity]);\n  const pressureThrustComponent = useMemo(() => (chamberPressure - ambientPressure) * 101325 * nozzleExitArea, [chamberPressure, ambientPressure, nozzleExitArea]);\n  const rocketAcceleration = useMemo(() => instantaneousThrust / 100000, [instantaneousThrust]);\n\n  const particles = useMemo(() => {\n    const arr = [];\n    for (let i = 0; i < 35; i++) {\n      arr.push({\n        id: i,\n        x: 480 + Math.random() * 20 - 10,\n        y: 240 + Math.random() * 40 - 20,\n        vx: 0,\n        vy: 0,\n        life: Math.random(),\n        maxLife: 1,\n        hue: 220,\n        size: 2 + Math.random() * 3\n      });\n    }\n    return arr;\n  }, []);\n\n  useEffect(() => {\n    const ctx = gsap.context(() => {\n      const updateParticles = () => {\n        if (!isPlaying) return;\n        particleRefs.current.forEach((ref, i) => {\n          if (!ref) return;\n          const p = particles[i];\n          p.life -= 0.016;\n          if (p.life <= 0) {\n            p.life = 1;\n            p.x = 480 + (Math.random() - 0.5) * 20;\n            p.y = 240 + (Math.random() - 0.5) * 40;\n            p.vx = (Math.random() - 0.5) * 2;\n            p.vy = exhaustVelocity * 0.1 + Math.random() * 50;\n            p.hue = 60;\n          }\n          p.x += p.vx * 0.16;\n          p.y += p.vy * 0.16;\n          p.vy += 20 * 0.16;\n          p.hue = Math.max(20, 220 - (p.life * 200));\n          p.size = 2 + (1 - p.life) * 3;\n          ref.setAttribute(\"cx\", p.x);\n          ref.setAttribute(\"cy\", p.y);\n          ref.setAttribute(\"fill\", `hsl(${p.hue}, 80%, ${60 + p.life * 40}%)`);\n          ref.setAttribute(\"r\", p.size);\n        });\n      };\n      const tick = () => {\n        updateParticles();\n        requestAnimationFrame(tick);\n      };\n      tick();\n      return () => ctx.revert();\n    }, []);\n  }, [isPlaying, particles, exhaustVelocity]);\n\n  const handlePlayPause = () => setIsPlaying(!isPlaying);\n  const handleReset = () => {\n    setPropellantFlowRate(250.0);\n    setExhaustVelocity(3000.0);\n    setChamberPressure(100.0);\n    setNozzleExitArea(1.5);\n    setAmbientPressure(0.0);\n    setIsPlaying(true);\n  };\n\n  return (\n    <div className=\"w-full max-w-4xl mx-auto p-4 space-y-6 font-sans\">\n      <header className=\"text-center\">\n        <h1 className=\"text-2xl font-bold text-white\">Rocket Propulsion System: Thrust Generation and Momentum Conservation</h1>\n        <p className=\"text-sm text-muted-foreground\">Aerospace Engineering / Rocket Science</p>\n      </header>\n\n      <div className=\"grid grid-cols-1 lg:grid-cols-3 gap-4 text-sm\">\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Instantaneous Thrust</div>\n          <div className=\"text-2xl font-semibold\">{Math.round(instantaneousThrust)} N</div>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Specific Impulse</div>\n          <div className=\"text-2xl font-semibold\">{specificImpulse.toFixed(1)} s</div>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Mass Flow Momentum</div>\n          <div className=\"text-2xl font-semibold\">{Math.round(massFlowMomentum)} N</div>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Pressure Thrust Component</div>\n          <div className=\"text-2xl font-semibold\">{Math.round(pressureThrustComponent)} N</div>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Rocket Acceleration</div>\n          <div className=\"text-2xl font-semibold\">{rocketAcceleration.toFixed(2)} m/s\u00b2</div>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-3\">\n          <div className=\"font-medium mb-1\">Exhaust Momentum Rate</div>\n          <div className=\"text-2xl font-semibold\">{Math.round(propellantFlowRate * exhaustVelocity)} N</div>\n        </div>\n      </div>\n\n      <div className=\"relative w-full h-[500px] bg-black/30 rounded-xl overflow-hidden\">\n        <svg viewBox=\"0 0 960 480\" className=\"w-full h-full\">\n          <defs>\n            <radialGradient id=\"combustionGradient\" gradientUnits=\"userSpaceOnUse\" cx=\"480\" cy=\"240\" r=\"0\">\n              <stop offset=\"0%\" stopColor=\"#ffffcc\" stopOpacity={0.9} />\n              <stop offset=\"100%\" stopColor=\"#ff6600\" stopOpacity={0.3} />\n            </radialGradient>\n            <filter id=\"glow\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">\n              <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"8\" floodColor=\"#ffcc00\" floodOpacity=\"0.5\" />\n            </filter>\n            <marker id=\"arrowhead\" markerWidth=\"10\" markerHeight=\"7\" refX=\"0\" refY=\"3.5\" orient=\"auto\">\n              <polygon points=\"0 0, 10 3.5, 0 7\" fill=\"#f43f5e\" />\n            </marker>\n          </defs>\n\n          {/* Layer 1: Environment Grid */}\n          <g className=\"stroke-muted/20\">\n            <path d=\"M0 240 L960 240\" />\n            <path d=\"M480 0 L480 480\" />\n            {[100, 200, 300, 400, 500, 600, 700, 800, 900].map(x => (\n              <line key={x} x1={x} y1={0} x2={x} y2={480} className=\"stroke-muted/10\" />\n            ))}\n            {[100, 200, 300, 400].map(y => (\n              <line key={y} x1={0} y1={y} x2={960} y2={y} className=\"stroke-muted/10\" />\n            ))}\n          </g>\n\n          {/* Layer 2: Primary Enclosure */}\n          <path ref={rocketPathRef} d=\"M120 80 C180 40, 780 40, 840 80 L840 400 C780 440, 180 440, 120 400 Z\" fill=\"none\" stroke=\"#38bdf8\" strokeWidth=\"3\" className=\"stroke-muted/50\" />\n\n          {/* Layer 3: Active Volumetric Medium */}\n          <ellipse ref={gradientRef} cx=\"480\" cy=\"240\" rx={40 + chamberPressure / 5} ry={20 + chamberPressure / 10} fill=\"url(#combustionGradient)\" filter=\"url(#glow)\" />\n\n          {/* Layer 4: Kinetic Particles */}\n          <g>\n            {particles.map((p, i) => (\n              <circle\n                key={i}\n                ref={ref => (particleRefs.current[i] = ref)}\n                cx={p.x}\n                cy={p.y}\n                r={p.size}\n                fill={`hsl(${p.hue}, 80%, ${60 + p.life * 40}%)`}\n              />\n            ))}\n          </g>\n\n          {/* Layer 5: In-situ HUD */}\n          <g className=\"text-white/80 text-sm\">\n            <text x=\"192\" y=\"144\">Chamber Pressure: {chamberPressure.toFixed(1)} atm</text>\n            <text x=\"480\" y=\"384\" textAnchor=\"middle\">Exhaust Velocity: {exhaustVelocity.toFixed(0)} m/s</text>\n            <text x=\"480\" y=\"420\" textAnchor=\"middle\" fill=\"#f43f5e\">\n              Thrust: {Math.round(instantaneousThrust)} N\n            </text>\n            <line x1=\"480\" y1=\"400\" x2=\"480\" y2=\"300\" stroke=\"#f43f5e\" strokeWidth=\"2\" markerEnd=\"url(#arrowhead)\" />\n            <text x=\"768\" y=\"96\" textAnchor=\"end\">Isp: {specificImpulse.toFixed(1)} s</text>\n          </g>\n        </svg>\n      </div>\n\n      <div className=\"space-y-4\">\n        <div className=\"grid gap-3 sm:grid-cols-2 lg:grid-cols-5\">\n          <div>\n            <label className=\"block text-sm font-medium mb-1\">Propellant Mass Flow Rate</label>\n            <input\n              type=\"range\"\n              min=\"50\"\n              max=\"500\"\n              step=\"10\"\n              value={propellantFlowRate}\n              onChange={e => setPropellantFlowRate(parseFloat(e.target.value))}\n              className=\"w-full\"\n            />\n            <div className=\"flex justify-between text-xs text-muted-foreground\">\n              <span>{propellantFlowRate} kg/s</span>\n            </div>\n          </div>\n          <div>\n            <label className=\"block text-sm font-medium mb-1\">Exhaust Velocity</label>\n            <input\n              type=\"range\"\n              min=\"2000\"\n              max=\"4500\"\n              step=\"50\"\n              value={exhaustVelocity}\n              onChange={e => setExhaustVelocity(parseFloat(e.target.value))}\n              className=\"w-full\"\n            />\n            <div className=\"flex justify-between text-xs text-muted-foreground\">\n              <span>{exhaustVelocity} m/s</span>\n            </div>\n          </div>\n          <div>\n            <label className=\"block text-sm font-medium mb-1\">Combustion Chamber Pressure</label>\n            <input\n              type=\"range\"\n              min=\"20\"\n              max=\"200\"\n              step=\"5\"\n              value={chamberPressure}\n              onChange={e => setChamberPressure(parseFloat(e.target.value))}\n              className=\"w-full\"\n            />\n            <div className=\"flex justify-between text-xs text-muted-foreground\">\n              <span>{chamberPressure} atm</span>\n            </div>\n          </div>\n          <div>\n            <label className=\"block text-sm font-medium mb-1\">Nozzle Exit Area</label>\n            <input\n              type=\"range\"\n              min=\"0.5\"\n              max=\"3.0\"\n              step=\"0.1\"\n              value={nozzleExitArea}\n              onChange={e => setNozzleExitArea(parseFloat(e.target.value))}\n              className=\"w-full\"\n            />\n            <div className=\"flex justify-between text-xs text-muted-foreground\">\n              <span>{nozzleExitArea.toFixed(1)} m\u00b2</span>\n            </div>\n          </div>\n          <div>\n            <label className=\"block text-sm font-medium mb-1\">Ambient Pressure</label>\n            <input\n              type=\"range\"\n              min=\"0\"\n              max=\"1\"\n              step=\"0.1\"\n              value={ambientPressure}\n              onChange={e => setAmbientPressure(parseFloat(e.target.value))}\n              className=\"w-full\"\n            />\n            <div className=\"flex justify-between text-xs text-muted-foreground\">\n              <span>{ambientPressure.toFixed(1)} atm</span>\n            </div>\n          </div>\n        </div>\n\n        <div className=\"flex justify-center space-x-3\">\n          <button\n            onClick={handlePlayPause}\n            className=\"px-4 py-2 bg-muted/50 hover:bg-muted/70 text-sm rounded-lg transition-colors\"\n          >\n            {isPlaying ? \"Pause\" : \"Play\"}\n          </button>\n          <button\n            onClick={handleReset}\n            className=\"px-4 py-2 bg-muted/50 hover:bg-muted/70 text-sm rounded-lg transition-colors\"\n          >\n            Reset to Defaults\n          </button>\n        </div>\n      </div>\n\n      <div className=\"grid gap-4 sm:grid-cols-2\">\n        <div className=\"bg-muted/50 rounded-lg p-4\">\n          <h3 className=\"font-semibold mb-2\">Ignition and Combustion</h3>\n          <p className=\"text-sm\">\n            Propellant and oxidizer mix in the combustion chamber, igniting to produce high-pressure, high-temperature gas. Chamber pressure drives the process.\n          </p>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-4\">\n          <h3 className=\"font-semibold mb-2\">Nozzle Acceleration</h3>\n          <p className=\"text-sm\">\n            Hot gas expands through the de Laval nozzle, converting thermal energy to kinetic energy. Exhaust velocity increases as pressure drops, maximizing momentum transfer.\n          </p>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-4\">\n          <h3 className=\"font-semibold mb-2\">Thrust Generation</h3>\n          <p className=\"text-sm\">\n            According to Newton's Third Law, the downward momentum of the exhaust creates an equal and opposite upward force on the rocket. Thrust depends on both mass flow rate and exhaust velocity.\n          </p>\n        </div>\n        <div className=\"bg-muted/50 rounded-lg p-4\">\n          <h3 className=\"font-semibold mb-2\">Momentum Conservation in Vacuum</h3>\n          <p className=\"text-sm\">\n            In space with no ambient pressure, thrust simplifies to F = \u1e41 * v_e. The rocket gains upward momentum exactly equal to the downward momentum of the exhaust, conserving total system momentum.\n          </p>\n        </div>\n      </div>\n    </div>\n  );\n}";
+      try {
+        const compiled = Babel.transform(sourceCode, { presets: [['react', { runtime: 'classic' }]] }).code;
+        
+        // Error Boundary definition in classic React
+        const ErrorBoundary = class extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+          }
+          static getDerivedStateFromError(error) {
+            return { hasError: true, error: error };
+          }
+          componentDidCatch(error, errorInfo) {
+            console.error('ErrorBoundary Caught Lifecycle Error:', error, errorInfo);
+          }
+          render() {
+            if (this.state.hasError) {
+              return React.createElement('div', {
+                style: { background: '#1e1e2e', border: '1px solid #ef4444', borderRadius: '8px', padding: '24px', margin: '20px', fontFamily: 'monospace', color: '#f87171' }
+              }, [
+                React.createElement('h2', { key: 'h2', style: { marginTop: 0, color: '#ef4444' } }, '⚠️ Simulation Component Error'),
+                React.createElement('p', { key: 'p' }, String(this.state.error?.message || this.state.error)),
+                React.createElement('pre', { key: 'pre', style: { background: '#0f0f17', padding: '12px', borderRadius: '4px', overflowX: 'auto', color: '#e2e8f0', marginTop: '12px' } }, String(this.state.error?.stack || this.state.error))
+              ]);
+            }
+            return this.props.children;
+          }
+        };
+
+        const runner = new Function(
+          'React', 'ReactDOM', 'gsap', 'THREE', 'ErrorBoundary',
+          `const { useState, useEffect, useRef, useMemo, useCallback } = React;\n` +
+          compiled +
+          `\nReactDOM.createRoot(document.getElementById('root')).render(
+            React.createElement(ErrorBoundary, null, React.createElement(RocketPropulsionSystemSimulation))
+          );`
+        );
+        runner(window.React, window.ReactDOM, window.gsap, window.THREE, ErrorBoundary);
+      } catch (err) {
+        console.error('Simulation Mount / Transpilation Error:', err);
+        const errBox = document.getElementById('error-container');
+        if (errBox) {
+          errBox.innerHTML = `
+            <div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">
+              <h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Transpilation / Runtime Error</h2>
+              <p><strong>Error:</strong> ${err.message}</p>
+              <pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">${err.stack || err.toString()}</pre>
+            </div>
+          `;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

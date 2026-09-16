@@ -1,0 +1,204 @@
+{
+  "simulation_id": "bayes_theorem_conditional_probability",
+  "title": "Bayes' Theorem: Updating Beliefs with Evidence",
+  "topic": "Probability Theory & Statistical Inference",
+  "pedagogical_goal": "This simulation demonstrates how Bayes' Theorem updates prior beliefs about hypotheses (e.g., which bag a marble came from) when new evidence (e.g., observing a red marble) is presented. Users manipulate prior probabilities and likelihoods to see how the posterior probability changes in real-time, reinforcing the relationship between conditional probability and evidence-based belief revision.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Bayes' Theorem: P(H|E) = [P(E|H) * P(H)] / P(E), where P(E) = P(E|H)*P(H) + P(E|\u00acH)*P(\u00acH)",
+      "Conditional Probability: P(A|B) = P(A \u2229 B) / P(B)",
+      "Law of Total Probability: P(E) = \u03a3 [P(E|H_i) * P(H_i)] for all mutually exclusive hypotheses H_i"
+    ],
+    "variables": {
+      "prior_left": {
+        "name": "Prior Probability: Left Bag",
+        "default": 0.5,
+        "unit": "",
+        "min": 0.01,
+        "max": 0.99,
+        "step": 0.01
+      },
+      "likelihood_red_given_left": {
+        "name": "Likelihood: P(Red | Left Bag)",
+        "default": 0.7,
+        "unit": "",
+        "min": 0.01,
+        "max": 0.99,
+        "step": 0.01
+      },
+      "likelihood_red_given_right": {
+        "name": "Likelihood: P(Red | Right Bag)",
+        "default": 0.3,
+        "unit": "",
+        "min": 0.01,
+        "max": 0.99,
+        "step": 0.01
+      }
+    },
+    "derived_formulas": {
+      "prior_right": "1 - prior_left",
+      "joint_red_left": "prior_left * likelihood_red_given_left",
+      "joint_red_right": "prior_right * likelihood_red_given_right",
+      "total_prob_red": "joint_red_left + joint_red_right",
+      "posterior_left_given_red": "joint_red_left / total_prob_red",
+      "posterior_right_given_red": "joint_red_right / total_prob_red"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "left_bag",
+        "type": "SVG_path",
+        "description": "A stylized bag silhouette on the left (x=180, y=240) defined by a curved SVG path: starts at (150,200), curves to (120,280), then to (180,320), to (240,280), and back to (150,200). Filled with accent color, stroke primary. Contains 7 red circles (radius 8px) and 3 black circles (radius 8px) to visually represent the marble composition based on likelihood_red_given_left."
+      },
+      {
+        "id": "right_bag",
+        "type": "SVG_path",
+        "description": "A stylized bag silhouette on the right (x=780, y=240) defined by a curved SVG path: starts at (750,200), curves to (720,280), then to (780,320), to (840,280), and back to (750,200). Filled with accent color, stroke primary. Contains 3 red circles (radius 8px) and 7 black circles (radius 8px) to visually represent the marble composition based on likelihood_red_given_right."
+      },
+      {
+        "id": "evidence_marble",
+        "type": "SVG_circle",
+        "description": "A single red marble (circle, radius 12px) that appears at the bottom center (x=480, y=420) when evidence is observed. It pulses with a glow effect (using accent color and glow) to draw attention. Initially hidden (opacity 0), becomes visible (opacity 1) when simulation starts, representing the observed evidence (drawing a red marble)."
+      },
+      {
+        "id": "probability_flow_left",
+        "type": "SVG_path",
+        "description": "A dynamic curved ribbon (cubic Bezier) flowing from the left bag to the evidence marble, then splitting to show posterior. Path: M180,240 C250,180 400,180 480,420 (to marble), then splits: M480,420 C520,380 580,380 620,300 (to posterior display). Stroke width varies with joint_red_left value, colored with primary color and 60% opacity. Represents the flow of probability mass from left bag hypothesis to evidence and then to posterior."
+      },
+      {
+        "id": "probability_flow_right",
+        "type": "SVG_path",
+        "description": "A dynamic curved ribbon (cubic Bezier) flowing from the right bag to the evidence marble, then splitting to show posterior. Path: M780,240 C710,180 560,180 480,420 (to marble), then splits: M480,420 C440,380 380,380 340,300 (to posterior display). Stroke width varies with joint_red_right value, colored with secondary color and 60% opacity. Represents the flow of probability mass from right bag hypothesis to evidence and then to posterior."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references (bags, marble, flow paths)",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "Animate dynamic elements using GSAP ticker or timeline with ease: 'none' for continuous motion",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5",
+      "Use GSAP's yoyo and repeat for pulsing evidence marble effect",
+      "Animate SVG path stroke-dashoffset and stroke-width for probability flow ribbons based on derived formulas"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_prior_left",
+      "label": "Prior Probability: Left Bag",
+      "param": "prior_left",
+      "type": "slider",
+      "min": 0.01,
+      "max": 0.99,
+      "step": 0.01,
+      "unit": ""
+    },
+    {
+      "id": "slider_likelihood_red_left",
+      "label": "Likelihood: P(Red | Left Bag)",
+      "param": "likelihood_red_given_left",
+      "type": "slider",
+      "min": 0.01,
+      "max": 0.99,
+      "step": 0.01,
+      "unit": ""
+    },
+    {
+      "id": "slider_likelihood_red_right",
+      "label": "Likelihood: P(Red | Right Bag)",
+      "param": "likelihood_red_given_right",
+      "type": "slider",
+      "min": 0.01,
+      "max": 0.99,
+      "step": 0.01,
+      "unit": ""
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Prior: Left Bag",
+      "formula": "prior_left",
+      "unit": ""
+    },
+    {
+      "label": "Prior: Right Bag",
+      "formula": "prior_right",
+      "unit": ""
+    },
+    {
+      "label": "P(Red \u2229 Left)",
+      "formula": "joint_red_left",
+      "unit": ""
+    },
+    {
+      "label": "P(Red \u2229 Right)",
+      "formula": "joint_red_right",
+      "unit": ""
+    },
+    {
+      "label": "Total P(Red)",
+      "formula": "total_prob_red",
+      "unit": ""
+    },
+    {
+      "label": "P(Left | Red) [Posterior]",
+      "formula": "posterior_left_given_red",
+      "unit": ""
+    },
+    {
+      "label": "P(Right | Red) [Posterior]",
+      "formula": "posterior_right_given_red",
+      "unit": ""
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Setting the Priors",
+      "text": "Begin by establishing your initial beliefs: what is the probability the marble came from the left bag before seeing any evidence? This is P(Left). The right bag gets the remaining probability: P(Right) = 1 - P(Left)."
+    },
+    {
+      "step": 2,
+      "title": "Introducing the Evidence",
+      "text": "Now, observe the evidence: a red marble is drawn. How likely is this evidence under each hypothesis? P(Red|Left) and P(Red|Right) represent these likelihoods. The joint probability P(Red \u2229 Left) = P(Left) * P(Red|Left) quantifies the chance of both the hypothesis and evidence occurring together."
+    },
+    {
+      "step": 3,
+      "title": "Updating Beliefs via Bayes' Theorem",
+      "text": "Bayes' Theorem normalizes the joint probabilities by the total evidence probability: P(Left|Red) = P(Red \u2229 Left) / P(Red). The posterior probability tells us our updated belief that the marble came from the left bag after seeing the red evidence. Notice how changing likelihoods or priors shifts the posterior."
+    },
+    {
+      "step": 4,
+      "title": "The Role of Total Evidence",
+      "text": "The denominator P(Red) = P(Red\u2229Left) + P(Red\u2229Right) ensures the posterior probabilities sum to 1. It represents the overall chance of observing a red marble from either bag. If one bag is much more likely to produce red, it dominates the posterior even with a modest prior."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

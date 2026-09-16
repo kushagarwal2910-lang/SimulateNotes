@@ -1,0 +1,214 @@
+{
+  "simulation_id": "butterfly_life_cycle_simulation",
+  "title": "Butterfly Metamorphosis: From Egg to Adult",
+  "topic": "Entomology & Insect Development Biology",
+  "pedagogical_goal": "This simulation illustrates the complete four-stage life cycle of a butterfly (egg, larva/caterpillar, pupa/chrysalis, adult) and demonstrates how environmental factors like temperature and food availability influence developmental timing and survival rates at each stage. Users will observe the dynamic transformation process and understand the biological mechanisms governing metamorphosis.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Developmental rate follows Arrhenius equation: rate = A * exp(-Ea/(R * T)) where temperature accelerates biochemical processes",
+      "Mass conservation during molting: larval mass increase = food intake - metabolic loss",
+      "Probability of survival at each stage = base_survival * exp(-predation_risk * time_exposed)",
+      "Resource-limited growth: growth_rate = max_rate * (food_availability / (food_availability + half_saturation))"
+    ],
+    "variables": {
+      "temperature": {
+        "name": "Ambient Temperature",
+        "default": 25,
+        "unit": "\u00b0C",
+        "min": 15,
+        "max": 35,
+        "step": 1
+      },
+      "food_availability": {
+        "name": "Leaf Food Availability",
+        "default": 0.7,
+        "unit": "fraction",
+        "min": 0.1,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "predation_risk": {
+        "name": "Predation Pressure",
+        "default": 0.3,
+        "unit": "risk units",
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "initial_egg_count": {
+        "name": "Starting Egg Batch",
+        "default": 50,
+        "unit": "eggs",
+        "min": 10,
+        "max": 200,
+        "step": 10
+      }
+    },
+    "derived_formulas": {
+      "egg_hatch_rate": "0.05 * Math.exp(0.08 * (temperature - 25))",
+      "larval_growth_rate": "0.12 * (food_availability / (food_availability + 0.3)) * Math.exp(0.06 * (temperature - 25))",
+      "pupation_probability": "1 / (1 + Math.exp(-2 * (larval_mass - 0.8)))",
+      "adult_emergence_rate": "0.03 * Math.exp(0.07 * (temperature - 25)) * (1 - predation_risk)",
+      "larval_mass": "Math.min(1.5, initial_egg_count * 0.02 * larval_growth_rate * time_in_larval_stage)",
+      "time_in_larval_stage": "20 / larval_growth_rate",
+      "time_in_pupal_stage": "15 / (0.02 * Math.exp(0.05 * (temperature - 25)))",
+      "survival_to_adult": "initial_egg_count * Math.exp(-egg_hatch_rate * 3) * Math.exp(-larval_growth_rate * time_in_larval_stage) * pupation_probability * Math.exp(-adult_emergence_rate * time_in_pupal_stage)"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Scientific grid background with leaf vein patterns and plant stem guides representing the host plant environment."
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Large closed leaf silhouette occupying 70% of canvas (path: M100 400 Q200 100 400 200 T700 400 L720 440 Q520 300 280 300 Z) representing the host plant leaf where metamorphosis occurs."
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Dynamic chlorophyll-filled leaf medium with linear gradient (stop 0%:#22c55e, stop 100%:#16a34a) and glow filter that intensifies with food_availability, showing nutrient flow veins that pulse based on larval_growth_rate."
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 30 animated entities - eggs (static clusters), caterpillars (moving along leaf edge with peristaltic motion), chrysalides (attached to stem with subtle pulsation), adult butterflies (flapping wings with GSAP trajectory)."
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ badges showing: 1) Current stage population counts, 2) Temperature-dependent development speedometer, 3) Food availability meter, 4) Survival probability gauge, all anchored to leaf veins and stem."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate translation for caterpillar crawling, rotation for wing flapping, scale for egg hatching/chrysalis splitting",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "temperature_slider",
+      "label": "Temperature",
+      "param": "temperature",
+      "type": "slider",
+      "min": 15,
+      "max": 35,
+      "step": 1,
+      "unit": "\u00b0C"
+    },
+    {
+      "id": "food_slider",
+      "label": "Food Availability",
+      "param": "food_availability",
+      "type": "slider",
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05,
+      "unit": "fraction"
+    },
+    {
+      "id": "predation_slider",
+      "label": "Predation Risk",
+      "param": "predation_risk",
+      "type": "slider",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05,
+      "unit": "risk units"
+    },
+    {
+      "id": "egg_count_slider",
+      "label": "Initial Egg Count",
+      "param": "initial_egg_count",
+      "type": "slider",
+      "min": 10,
+      "max": 200,
+      "step": 10,
+      "unit": "eggs"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Eggs Hatching/Hour",
+      "formula": "egg_hatch_rate * initial_egg_count",
+      "unit": "eggs/hr"
+    },
+    {
+      "label": "Larval Growth Rate",
+      "formula": "larval_growth_rate",
+      "unit": "mass/day"
+    },
+    {
+      "label": "Pupation Success %",
+      "formula": "pupation_probability * 100",
+      "unit": "%"
+    },
+    {
+      "label": "Adults Emerging/Hour",
+      "formula": "adult_emergence_rate * survival_to_adult",
+      "unit": "butterflies/hr"
+    },
+    {
+      "label": "Total Survival to Adult",
+      "formula": "survival_to_adult",
+      "unit": "individuals"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Stage 1: Egg",
+      "text": "Female butterflies lay eggs on host plant leaves. Temperature significantly affects hatch rate - warmer temperatures accelerate embryonic development via increased metabolic activity."
+    },
+    {
+      "step": 2,
+      "title": "Stage 2: Larva (Caterpillar)",
+      "text": "Caterpillars consume leaves to grow. Food availability directly impacts growth rate and time to pupation, while predation risk increases with feeding activity and movement."
+    },
+    {
+      "step": 3,
+      "title": "Stage 3: Pupa (Chrysalis)",
+      "text": "Inside the chrysalis, histolysis and histogenesis transform larval tissues into adult structures. Temperature influences the rate of this biochemical reorganization."
+    },
+    {
+      "step": 4,
+      "title": "Stage 4: Adult (Imago)",
+      "text": "Emerging adults expand wings by pumping hemolymph. Survival to adulthood depends on successful completion of prior stages and avoidance of predators during vulnerable expansion period."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

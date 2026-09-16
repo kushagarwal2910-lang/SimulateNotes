@@ -1,0 +1,120 @@
+{
+  "simulation_id": "sim_simulate_centrifugal_pump_impell",
+  "title": "Simulate Centrifugal Pump Impeller & Fluid Dynamics",
+  "domain": "Applied Physics & Dynamics",
+  "pedagogical_description": "Interactive 60 FPS computational simulation demonstrating the physical dynamics and governing equations of Simulate Centrifugal Pump Impeller & Fluid Dynamics.",
+  "physics_model": {
+    "variables": {
+      "drive_rate": {
+        "name": "Drive Rate",
+        "symbol": "R_d",
+        "unit": "a.u.",
+        "min": 10.0,
+        "max": 100.0,
+        "default": 50.0,
+        "step": 1.0
+      },
+      "flow_velocity": {
+        "name": "Flow Velocity",
+        "symbol": "v",
+        "unit": "m/s",
+        "min": 1.0,
+        "max": 20.0,
+        "default": 8.0,
+        "step": 0.5
+      },
+      "density_factor": {
+        "name": "Density Factor",
+        "symbol": "rho",
+        "unit": "kg/m^3",
+        "min": 0.5,
+        "max": 5.0,
+        "default": 1.5,
+        "step": 0.1
+      }
+    },
+    "derived_formulas": {
+      "effective_flux": "drive_rate * flow_velocity * 0.12",
+      "kinetic_intensity": "0.5 * density_factor * Math.pow(flow_velocity, 2)"
+    },
+    "constants": {
+      "base_damping": 0.98
+    }
+  },
+  "interactive_controls": [
+    {
+      "id": "ctrl_rate",
+      "param": "drive_rate",
+      "type": "slider",
+      "label": "Drive Rate",
+      "unit": "a.u.",
+      "min": 10,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "id": "ctrl_vel",
+      "param": "flow_velocity",
+      "type": "slider",
+      "label": "Flow Velocity",
+      "unit": "m/s",
+      "min": 1,
+      "max": 20,
+      "step": 0.5
+    },
+    {
+      "id": "ctrl_rho",
+      "param": "density_factor",
+      "type": "slider",
+      "label": "Medium Density",
+      "unit": "kg/m^3",
+      "min": 0.5,
+      "max": 5,
+      "step": 0.1
+    }
+  ],
+  "visual_scene": {
+    "coordinate_space": {
+      "width": 960,
+      "height": 480
+    },
+    "components": [
+      {
+        "id": "comp_grid",
+        "type": "background_grid",
+        "layer": 1,
+        "description": "CAD coordinate grid"
+      },
+      {
+        "id": "comp_hull",
+        "type": "volumetric_hull",
+        "layer": 2,
+        "description": "Volumetric physical boundary encompassing >= 65% of viewport"
+      },
+      {
+        "id": "comp_fluid",
+        "type": "reactive_medium",
+        "layer": 3,
+        "description": "Gradient internal fluid level reflecting system flux"
+      },
+      {
+        "id": "comp_particles",
+        "type": "kinetic_particles",
+        "layer": 4,
+        "description": "35 dynamic flow particles driven by velocity and kinetic intensity"
+      }
+    ]
+  },
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Dynamic Equilibrium",
+      "description": "Adjusting flow velocity accelerates kinetic intensity nonlinearly via v^2 scaling."
+    },
+    {
+      "step": 2,
+      "title": "Flux Saturation",
+      "description": "High drive rates saturate the effective flux through the volumetric enclosure."
+    }
+  ]
+}

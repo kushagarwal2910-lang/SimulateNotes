@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Simulation for Validation</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 3 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Three.js & OrbitControls for 3D WebGL Scenes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="error-container"></div>
+  <script>
+    // Global uncaught error display
+    window.addEventListener('error', function(event) {
+      console.error('Global Window Error:', event);
+      var errBox = document.getElementById('error-container');
+      if (errBox) {
+        var msg = event.message || (event.error && event.error.message) || 'Unknown error';
+        var stack = (event.error && event.error.stack) || (event.filename + ':' + event.lineno);
+        errBox.innerHTML = '<div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">' +
+          '<h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Runtime Error</h2>' +
+          '<p><strong>Error:</strong> ' + msg + '</p>' +
+          '<pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">' + stack + '</pre>' +
+          '</div>';
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const sourceCode = "\n\n\nfunction TestSimulation() {\n  const [scaleFactor, setScaleFactor] = useState(1.5);\n  const [decayRate, setDecayRate] = useState(0.3);\n  const [frequency, setFrequency] = useState(0.5);\n  const [amplitude, setAmplitude] = useState(100);\n  const [baseOpacity, setBaseOpacity] = useState(0.7);\n  const [timeElapsed, setTimeElapsed] = useState(0);\n  const [isPlaying, setIsPlaying] = useState(false);\n  const particleContainerRef = useRef(null);\n  const gsapContextRef = useRef(null);\n\n  const scaledOutput = useMemo(() => scaleFactor * 100, [scaleFactor]);\n  const mediumOpacity = useMemo(() => baseOpacity * Math.exp(-decayRate * timeElapsed), [baseOpacity, decayRate, timeElapsed]);\n  const particleX = useMemo(() => amplitude * Math.sin(2 * Math.PI * frequency * timeElapsed) + 480, [amplitude, frequency, timeElapsed]);\n  const particleY = useMemo(() => amplitude * Math.cos(2 * Math.PI * frequency * timeElapsed) + 240, [amplitude, frequency, timeElapsed]);\n  const gradientStop1 = useMemo(() => Math.min(1, scaledOutput / 200), [scaledOutput]);\n  const gradientStop2 = useMemo(() => Math.max(0, 1 - scaledOutput / 300), [scaledOutput]);\n  const particleCount = useMemo(() => Math.floor(20 + scaleFactor * 10), [scaleFactor]);\n\n  const particles = useMemo(() => {\n    const arr = [];\n    for (let i = 0; i < particleCount; i++) {\n      arr.push({\n        id: i,\n        phase: (i / particleCount) * Math.PI * 2,\n        offset: Math.random() * 0.5\n      });\n    }\n    return arr;\n  }, [particleCount]);\n\n  useEffect(() => {\n    const ctx = gsap.context(() => {\n      if (isPlaying) {\n        gsap.ticker.add(tick);\n      }\n    }, particleContainerRef.current);\n    gsapContextRef.current = ctx;\n    return () => {\n      gsap.ticker.remove(tick);\n      ctx.revert();\n    };\n  }, [isPlaying]);\n\n  const tick = () => {\n    setTimeElapsed(prev => prev + 0.016);\n  };\n\n  const handlePlayPause = () => {\n    setIsPlaying(!isPlaying);\n    if (!isPlaying) {\n      gsap.ticker.add(tick);\n    } else {\n      gsap.ticker.remove(tick);\n    }\n  };\n\n  const handleReset = () => {\n    setScaleFactor(1.5);\n    setDecayRate(0.3);\n    setFrequency(0.5);\n    setAmplitude(100);\n    setBaseOpacity(0.7);\n    setTimeElapsed(0);\n    setIsPlaying(false);\n    gsap.ticker.remove(tick);\n  };\n\n  return (\n    <div className=\"min-h-screen bg-gray-900 text-white p-6\">\n      <header className=\"mb-6 text-center\">\n        <h1 className=\"text-2xl font-bold\">Test Simulation for Validation</h1>\n        <p className=\"text-sm text-gray-400\">General Testing and Validation Framework</p>\n      </header>\n\n      <div className=\"grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-3\">\n        {[ \n          { label: \"Scaled Output Value\", value: scaledOutput.toFixed(2), unit: \"a.u.\" },\n          { label: \"Medium Opacity\", value: mediumOpacity.toFixed(3), unit: \"\" },\n          { label: \"Particle Count\", value: particleCount, unit: \"\" },\n          { label: \"X-Position Amplitude\", value: amplitude.toFixed(0), unit: \"px\" },\n          { label: \"Frequency Domain\", value: (frequency * 2 * Math.PI).toFixed(2), unit: \"rad/s\" },\n          { label: \"Decay Time Constant\", value: (1 / decayRate).toFixed(2), unit: \"s\" }\n        ].map((metric, index) => (\n          <div key={index} className=\"bg-gray-800/50 rounded-xl p-4 border border-gray-700/50\">\n            <p className=\"text-xs text-gray-400 mb-1\">{metric.label}</p>\n            <p className=\"text-lg font-mono\">{metric.value} {metric.unit}</p>\n          </div>\n        ))}\n      </div>\n\n      <div className=\"relative w-full h-[500px] min-h-[500px] bg-gray-900 rounded-xl overflow-hidden mb-6\">\n        <svg viewBox=\"0 0 960 480\" className=\"w-full h-full\">\n          {/* Layer 1: Environment Grid */}\n          <defs>\n            <pattern id=\"grid\" width=\"20\" height=\"20\" patternUnits=\"userSpaceOnUse\">\n              <path d=\"M20 0 L0 0 0 20\" fill=\"none\" stroke=\"rgba(56,189,248,0.08)\" strokeWidth=\"0.5\"/>\n            </pattern>\n            <linearGradient id=\"mediumGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\">\n              <stop offset=\"0%\" stopColor=\"rgba(56,189,248,0.6)\" stopOpacity={mediumOpacity}/>\n              <stop offset=\"100%\" stopColor=\"rgba(244,63,94,0.4)\" stopOpacity={mediumOpacity}/>\n            </linearGradient>\n            <filter id=\"glowPulse\">\n              <feGaussianBlur stdDeviation=\"3\" result=\"coloredBlur\"/>\n              <feMerge>\n                <feMergeNode in=\"coloredBlur\"/>\n                <feMergeNode in=\"SourceGraphic\"/>\n              </feMerge>\n            </filter>\n          </defs>\n          <rect width=\"100%\" height=\"100%\" fill=\"url(#grid)\"/>\n          <line x1=\"0\" y1=\"240\" x2=\"960\" y2=\"240\" stroke=\"rgba(56,189,248,0.2)\" strokeWidth=\"1\"/>\n          <line x1=\"480\" y1=\"0\" x2=\"480\" y2=\"480\" stroke=\"rgba(56,189,248,0.2)\" strokeWidth=\"1\"/>\n          <text x=\"10\" y=\"230\" fill=\"rgba(56,189,248,0.5)\" fontSize=\"10\">X-Axis</text>\n          <text x=\"490\" y=\"20\" fill=\"rgba(56,189,248,0.5)\" fontSize=\"10\" transform=\"rotate(-90 490,20)\">Y-Axis</text>\n\n          {/* Layer 2: Primary Enclosure Silhouette */}\n          <path d=\"M140 60 C140 30, 340 30, 340 60 L620 60 C620 30, 820 30, 820 60 L880 120 C880 150, 880 330, 880 360 L820 420 C820 450, 620 450, 620 420 L340 420 C340 450, 140 450, 140 420 L80 360 C80 330, 80 150, 80 120 Z\" fill=\"rgba(30,35,50,0.8)\" stroke=\"rgba(56,189,248,0.4)\" strokeWidth=\"2\"/>\n\n          {/* Layer 3: Active Volumetric Medium */}\n          <rect x=\"160\" y=\"100\" width=\"640\" height=\"280\" fill=\"url(#mediumGrad)\" filter=\"url(#glowPulse)\"/>\n\n          {/* Layer 4: Kinetic Actors and Particles */}\n          <g id=\"particleContainer\" ref={particleContainerRef}>\n            {particles.map(p => (\n              <circle key={p.id} cx={particleX + Math.sin(p.phase + timeElapsed * frequency * Math.PI * 2) * amplitude * 0.5} cy={particleY + Math.cos(p.phase + timeElapsed * frequency * Math.PI * 2) * amplitude * 0.5} r={3} fill=\"url(#mediumGrad)\"\n              />\n            ))}\n          </g>\n\n          {/* Layer 5: In-situ Instrumentation Callouts */}\n          <g id=\"instrumentationHUD\">\n            <rect x=\"20\" y=\"20\" width=\"220\" height=\"80\" fill=\"rgba(0,0,0,0.6)\" rx=\"8\"/>\n            <text x=\"30\" y=\"40\" fill=\"#38bdf8\" fontSize=\"12\" fontFamily=\"monospace\">scale_factor = {scaleFactor.toFixed(2)}</text>\n            <text x=\"30\" y=\"58\" fill=\"#38bdf8\" fontSize=\"12\" fontFamily=\"monospace\">decay_rate = {decayRate.toFixed(3)}</text>\n            <text x=\"30\" y=\"76\" fill=\"#38bdf8\" fontSize=\"12\" fontFamily=\"monospace\">frequency = {frequency.toFixed(3)}</text>\n            <rect x=\"720\" y=\"20\" width=\"220\" height=\"80\" fill=\"rgba(0,0,0,0.6)\" rx=\"8\"/>\n            <text x=\"730\" y=\"40\" fill=\"#f43f5e\" fontSize=\"12\" fontFamily=\"monospace\">scaled_output = {scaledOutput.toFixed(2)}</text>\n            <text x=\"730\" y=\"58\" fill=\"#f43f5e\" fontSize=\"12\" fontFamily=\"monospace\">medium_opacity = {mediumOpacity.toFixed(3)}</text>\n            <text x=\"730\" y=\"76\" fill=\"#f43f5e\" fontSize=\"12\" fontFamily=\"monospace\">particle_count = {particleCount}</text>\n          </g>\n        </svg>\n      </div>\n\n      <div className=\"grid gap-4 mb-6 sm:grid-cols-3\">\n        <div>\n          <label className=\"block text-sm text-gray-400 mb-1\">Scale Multiplier</label>\n          <input\n            type=\"range\"\n            min=\"0.1\"\n            max=\"5.0\"\n            step=\"0.1\"\n            value={scaleFactor}\n            onChange={(e) => setScaleFactor(parseFloat(e.target.value))}\n            className=\"w-full\"\n          />\n        </div>\n        <div>\n          <label className=\"block text-sm text-gray-400 mb-1\">Decay Rate (1/s)</label>\n          <input\n            type=\"range\"\n            min=\"0.01\"\n            max=\"2.0\"\n            step=\"0.01\"\n            value={decayRate}\n            onChange={(e) => setDecayRate(parseFloat(e.target.value))}\n            className=\"w-full\"\n          />\n        </div>\n        <div>\n          <label className=\"block text-sm text-gray-400 mb-1\">Frequency (Hz)</label>\n          <input\n            type=\"range\"\n            min=\"0.1\"\n            max=\"3.0\"\n            step=\"0.05\"\n            value={frequency}\n            onChange={(e) => setFrequency(parseFloat(e.target.value))}\n            className=\"w-full\"\n          />\n        </div>\n        <div>\n          <label className=\"block text-sm text-gray-400 mb-1\">Amplitude (px)</label>\n          <input\n            type=\"range\"\n            min=\"10\"\n            max=\"200\"\n            step=\"5\"\n            value={amplitude}\n            onChange={(e) => setAmplitude(parseFloat(e.target.value))}\n            className=\"w-full\"\n          />\n        </div>\n        <div>\n          <label className=\"block text-sm text-gray-400 mb-1\">Base Opacity</label>\n          <input\n            type=\"range\"\n            min=\"0.1\"\n            max=\"1.0\"\n            step=\"0.05\"\n            value={baseOpacity}\n            onChange={(e) => setBaseOpacity(parseFloat(e.target.value))}\n            className=\"w-full\"\n          />\n        </div>\n      </div>\n\n      <div className=\"flex justify-center gap-4\">\n        <button\n          onClick={handlePlayPause}\n          className=\"px-6 py-3 bg-gray-800/50 hover:bg-gray-700/70 text-sm rounded-lg transition-colors border border-gray-700/50\"\n        >\n          {isPlaying ? \"Pause\" : \"Play\"}\n        </button>\n        <button\n          onClick={handleReset}\n          className=\"px-6 py-3 bg-gray-800/50 hover:bg-gray-700/70 text-sm rounded-lg transition-colors border border-gray-700/50\"\n        >\n          Reset to Defaults\n        </button>\n      </div>\n\n      <div className=\"grid gap-4 mt-6 sm:grid-cols-2\">\n        {[1, 2, 3, 4].map(step => (\n          <div key={step} className=\"bg-gray-800/50 rounded-xl p-4 border border-gray-700/50\">\n            <h3 className=\"text-lg font-semibold mb-2\">\n              Step {step}: \n              {step === 1 ? \"Initial State\" : step === 2 ? \"Parameter Interaction\" : step === 3 ? \"Oscillatory Behavior\" : \"System Equilibrium\"}\n            </h3>\n            <p className=\"text-sm text-gray-300 leading-relaxed\">\n              {step === 1\n                ? \"The system starts with default parameters: scale_factor=1.5, decay_rate=0.3, frequency=0.5Hz. Observe the medium's base color and the particle motion establishing the baseline behavior.\"\n                : step === 2\n                ? \"Increasing scale_factor amplifies the output signal and increases particle count. Adjusting decay_rate controls how quickly the medium's opacity diminishes over time, demonstrating exponential decay dynamics.\"\n                : step === 3\n                ? \"Modifying frequency and amplitude directly controls the particles' trajectory speed and radius. The Lissajous-like patterns emerge from the phase-shifted sine and cosine functions in the derived formulas.\"\n                : \"At steady state, the telemetry metrics reflect the balanced interaction of all parameters. The system demonstrates how multiple physical processes (scaling, decay, oscillation) can be simultaneously controlled and observed in a unified framework.\"\n              }\n            </p>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n}";
+      try {
+        const compiled = Babel.transform(sourceCode, { presets: [['react', { runtime: 'classic' }]] }).code;
+        
+        // Error Boundary definition in classic React
+        const ErrorBoundary = class extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+          }
+          static getDerivedStateFromError(error) {
+            return { hasError: true, error: error };
+          }
+          componentDidCatch(error, errorInfo) {
+            console.error('ErrorBoundary Caught Lifecycle Error:', error, errorInfo);
+          }
+          render() {
+            if (this.state.hasError) {
+              return React.createElement('div', {
+                style: { background: '#1e1e2e', border: '1px solid #ef4444', borderRadius: '8px', padding: '24px', margin: '20px', fontFamily: 'monospace', color: '#f87171' }
+              }, [
+                React.createElement('h2', { key: 'h2', style: { marginTop: 0, color: '#ef4444' } }, '⚠️ Simulation Component Error'),
+                React.createElement('p', { key: 'p' }, String(this.state.error?.message || this.state.error)),
+                React.createElement('pre', { key: 'pre', style: { background: '#0f0f17', padding: '12px', borderRadius: '4px', overflowX: 'auto', color: '#e2e8f0', marginTop: '12px' } }, String(this.state.error?.stack || this.state.error))
+              ]);
+            }
+            return this.props.children;
+          }
+        };
+
+        const runner = new Function(
+          'React', 'ReactDOM', 'gsap', 'THREE', 'ErrorBoundary',
+          `const { useState, useEffect, useRef, useMemo, useCallback } = React;\n` +
+          compiled +
+          `\nReactDOM.createRoot(document.getElementById('root')).render(
+            React.createElement(ErrorBoundary, null, React.createElement(TestSimulation))
+          );`
+        );
+        runner(window.React, window.ReactDOM, window.gsap, window.THREE, ErrorBoundary);
+      } catch (err) {
+        console.error('Simulation Mount / Transpilation Error:', err);
+        const errBox = document.getElementById('error-container');
+        if (errBox) {
+          errBox.innerHTML = `
+            <div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">
+              <h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Transpilation / Runtime Error</h2>
+              <p><strong>Error:</strong> ${err.message}</p>
+              <pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">${err.stack || err.toString()}</pre>
+            </div>
+          `;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

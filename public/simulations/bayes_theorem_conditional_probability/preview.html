@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bayes' Theorem: Updating Beliefs with Evidence</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 3 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Three.js & OrbitControls for 3D WebGL Scenes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="error-container"></div>
+  <script>
+    // Global uncaught error display
+    window.addEventListener('error', function(event) {
+      console.error('Global Window Error:', event);
+      var errBox = document.getElementById('error-container');
+      if (errBox) {
+        var msg = event.message || (event.error && event.error.message) || 'Unknown error';
+        var stack = (event.error && event.error.stack) || (event.filename + ':' + event.lineno);
+        errBox.innerHTML = '<div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">' +
+          '<h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Runtime Error</h2>' +
+          '<p><strong>Error:</strong> ' + msg + '</p>' +
+          '<pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">' + stack + '</pre>' +
+          '</div>';
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const sourceCode = "\n\n\nfunction BayesTheoremConditionalProbabilitySimulation() {\n  const [priorLeft, setPriorLeft] = useState(0.5);\n  const [likelihoodRedLeft, setLikelihoodRedLeft] = useState(0.7);\n  const [likelihoodRedRight, setLikelihoodRedRight] = useState(0.3);\n  const [isPlaying, setIsPlaying] = useState(false);\n\n  const priorRight = 1 - priorLeft;\n  const jointRedLeft = priorLeft * likelihoodRedLeft;\n  const jointRedRight = priorRight * likelihoodRedRight;\n  const totalProbRed = jointRedLeft + jointRedRight;\n  const posteriorLeftGivenRed = totalProbRed > 0 ? jointRedLeft / totalProbRed : 0;\n  const posteriorRightGivenRed = totalProbRed > 0 ? jointRedRight / totalProbRed : 0;\n\n  const leftBagRef = useRef(null);\n  const rightBagRef = useRef(null);\n  const evidenceMarbleRef = useRef(null);\n  const flowLeftRef = useRef(null);\n  const flowRightRef = useRef(null);\n\n  const pulseTl = useRef(null);\n  const flowLeftTl = useRef(null);\n  const flowRightTl = useRef(null);\n\n  useEffect(() => {\n    const ctx = gsap.context(() => {\n      pulseTl.current = gsap.to(evidenceMarbleRef.current, {\n        attr: { r: 16 },\n        opacity: 0.7,\n        yoyo: true,\n        repeat: -1,\n        duration: 0.8,\n        ease: \"power1.inOut\"\n      });\n\n      const updateFlow = () => {\n        const leftWidth = Math.max(2, jointRedLeft * 20);\n        const rightWidth = Math.max(2, jointRedRight * 20);\n\n        if (flowLeftTl.current) flowLeftTl.current.kill();\n        if (flowRightTl.current) flowRightTl.current.kill();\n\n        flowLeftTl.current = gsap.to(flowLeftRef.current, {\n          strokeWidth: leftWidth,\n          duration: 0.5,\n          ease: \"power2.out\"\n        });\n\n        flowRightTl.current = gsap.to(flowRightRef.current, {\n          strokeWidth: rightWidth,\n          duration: 0.5,\n          ease: \"power2.out\"\n        });\n      };\n\n      updateFlow();\n    }, null);\n\n    return () => ctx.revert();\n  }, [priorLeft, likelihoodRedLeft, likelihoodRedRight, jointRedLeft, jointRedRight]);\n\n  const handlePlayPause = () => setIsPlaying(!isPlaying);\n  const handleReset = () => {\n    setPriorLeft(0.5);\n    setLikelihoodRedLeft(0.7);\n    setLikelihoodRedRight(0.3);\n    setIsPlaying(false);\n  };\n\n  const telemetryMetrics = [\n    { label: \"Prior: Left Bag\", value: priorLeft.toFixed(3) },\n    { label: \"Prior: Right Bag\", value: priorRight.toFixed(3) },\n    { label: \"P(Red \u2229 Left)\", value: jointRedLeft.toFixed(3) },\n    { label: \"P(Red \u2229 Right)\", value: jointRedRight.toFixed(3) },\n    { label: \"Total P(Red)\", value: totalProbRed.toFixed(3) },\n    { label: \"P(Left | Red) [Posterior]\", value: posteriorLeftGivenRed.toFixed(3) },\n    { label: \"P(Right | Red) [Posterior]\", value: posteriorRightGivenRed.toFixed(3) }\n  ];\n\n  const pedagogicalCallouts = [\n    {\n      step: 1,\n      title: \"Setting the Priors\",\n      text: \"Begin by establishing your initial beliefs: what is the probability the marble came from the left bag before seeing any evidence? This is P(Left). The right bag gets the remaining probability: P(Right) = 1 - P(Left).\"\n    },\n    {\n      step: 2,\n      title: \"Introducing the Evidence\",\n      text: \"Now, observe the evidence: a red marble is drawn. How likely is this evidence under each hypothesis? P(Red|Left) and P(Red|Right) represent these likelihoods. The joint probability P(Red \u2229 Left) = P(Left) * P(Red|Left) quantifies the chance of both the hypothesis and evidence occurring together.\"\n    },\n    {\n      step: 3,\n      title: \"Updating Beliefs via Bayes' Theorem\",\n      text: \"Bayes' Theorem normalizes the joint probabilities by the total evidence probability: P(Left|Red) = P(Red \u2229 Left) / P(Red). The posterior probability tells us our updated belief that the marble came from the left bag after seeing the red evidence. Notice how changing likelihoods or priors shifts the posterior.\"\n    },\n    {\n      step: 4,\n      title: \"The Role of Total Evidence\",\n      text: \"The denominator P(Red) = P(Red\u2229Left) + P(Red\u2229Right) ensures the posterior probabilities sum to 1. It represents the overall chance of observing a red marble from either bag. If one bag is much more likely to produce red, it dominates the posterior even with a modest prior.\"\n    }\n  ];\n\n  return (\n    <div className=\"min-h-screen bg-gradient-to-br from-[#0b0f19] to-[#111827] text-white p-6\">\n      <header className=\"text-center mb-8\">\n        <h1 className=\"text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#38bdf8] to-[#f43f5e]\">\n          Bayes' Theorem: Updating Beliefs with Evidence\n        </h1>\n        <p className=\"mt-2 text-sm text-[#94a3b8]\">\n          Manipulate priors and likelihoods to see how evidence updates beliefs in real-time\n        </p>\n      </header>\n\n      <div className=\"grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-7\">\n        {telemetryMetrics.map((metric, index) => (\n          <div\n            key={index}\n            className=\"bg-[#1e293b]/50 backdrop-blur-sm rounded-xl p-4 border border-[#334155]/50 text-center\"\n          >\n            <div className=\"text-xs text-[#94a3b8] mb-1\">{metric.label}</div>\n            <div className=\"text-lg font-mono font-bold\">{metric.value}</div>\n          </div>\n        ))}\n      </div>\n\n      <div className=\"relative h-[500px] w-full mb-8\">\n        <svg\n          viewBox=\"0 0 960 480\"\n          className=\"w-full h-full\"\n          style={{ backgroundColor: \"#0b0f19\" }}\n        >\n          <defs>\n            <radialGradient id=\"marbleGlow\" cx=\"50%\" cy=\"50%\" r=\"50%\">\n              <stop offset=\"0%\" stopColor=\"#34d399\" stopOpacity=\"0.4\" />\n              <stop offset=\"100%\" stopColor=\"#34d399\" stopOpacity=\"0\" />\n            </radialGradient>\n            <filter id=\"glow\" x=\"-50%\" y=\"-50%\" width=\"200%\" height=\"200%\">\n              <feDropShadow dx=\"0\" dy=\"0\" stdDeviation=\"8\" floodColor=\"#34d399\" floodOpacity=\"0.5\" />\n            </filter>\n          </defs>\n\n          {/* Left Bag */}\n          <g ref={leftBagRef}>\n            <path d=\"M150,200 C120,280 180,320 240,280 L150,200 Z\" fill=\"#34d399\" stroke=\"#38bdf8\" strokeWidth=\"2\"\n            >\n              {/* Red marbles (7) */}\n              {Array.from({ length: 7 }).map((_, i) => (\n                <circle key={i} cx={160 + (i % 3) * 20} cy={210 + Math.floor(i / 3) * 20} r=\"8\" fill=\"#f43f5e\"\n                />\n              ))}\n              {/* Black marbles (3) */}\n              {Array.from({ length: 3 }).map((_, i) => (\n                <circle key={i + 7} cx={160 + (i % 3) * 20} cy={250 + Math.floor(i / 3) * 20} r=\"8\" fill=\"#0f172a\"\n                />\n              ))}\n            </path>\n          </g>\n\n          {/* Right Bag */}\n          <g ref={rightBagRef}>\n            <path d=\"M750,200 C720,280 780,320 840,280 L750,200 Z\" fill=\"#34d399\" stroke=\"#38bdf8\" strokeWidth=\"2\"\n            >\n              {/* Red marbles (3) */}\n              {Array.from({ length: 3 }).map((_, i) => (\n                <circle key={i} cx={760 + (i % 3) * 20} cy={210 + Math.floor(i / 3) * 20} r=\"8\" fill=\"#f43f5e\"\n                />\n              ))}\n              {/* Black marbles (7) */}\n              {Array.from({ length: 7 }).map((_, i) => (\n                <circle key={i + 3} cx={760 + (i % 3) * 20} cy={250 + Math.floor(i / 3) * 20} r=\"8\" fill=\"#0f172a\"\n                />\n              ))}\n            </path>\n          </g>\n\n          {/* Evidence Marble */}\n          <circle ref={evidenceMarbleRef} cx=\"480\" cy=\"420\" r=\"12\" fill=\"#f43f5e\" opacity=\"0\" filter=\"url(#glow)\"\n          />\n\n          {/* Probability Flow Left */}\n          <path ref={flowLeftRef} d=\"M180,240 C250,180 400,180 480,420 M480,420 C520,380 580,380 620,300\" fill=\"none\" stroke=\"#38bdf8\" strokeWidth=\"4\" opacity=\"0.6\" strokeDasharray=\"0\"\n          />\n\n          {/* Probability Flow Right */}\n          <path ref={flowRightRef} d=\"M780,240 C710,180 560,180 480,420 M480,420 C440,380 380,380 340,300\" fill=\"none\" stroke=\"#f43f5e\" strokeWidth=\"4\" opacity=\"0.6\" strokeDasharray=\"0\"\n          />\n        </svg>\n      </div>\n\n      <div className=\"space-y-4\">\n        <div className=\"space-y-2\">\n          <label className=\"text-sm font-medium flex justify-between\">\n            Prior Probability: Left Bag\n            <span>{(priorLeft * 100).toFixed(0)}%</span>\n          </label>\n          <input\n            type=\"range\"\n            min=\"0.01\"\n            max=\"0.99\"\n            step=\"0.01\"\n            value={priorLeft}\n            onChange={(e) => setPriorLeft(parseFloat(e.target.value))}\n            className=\"w-full h-2 bg-[#334155]/50 rounded\"\n          />\n        </div>\n\n        <div className=\"space-y-2\">\n          <label className=\"text-sm font-medium flex justify-between\">\n            Likelihood: P(Red | Left Bag)\n            <span>{(likelihoodRedLeft * 100).toFixed(0)}%</span>\n          </label>\n          <input\n            type=\"range\"\n            min=\"0.01\"\n            max=\"0.99\"\n            step=\"0.01\"\n            value={likelihoodRedLeft}\n            onChange={(e) => setLikelihoodRedLeft(parseFloat(e.target.value))}\n            className=\"w-full h-2 bg-[#334155]/50 rounded\"\n          />\n        </div>\n\n        <div className=\"space-y-2\">\n          <label className=\"text-sm font-medium flex justify-between\">\n            Likelihood: P(Red | Right Bag)\n            <span>{(likelihoodRedRight * 100).toFixed(0)}%</span>\n          </label>\n          <input\n            type=\"range\"\n            min=\"0.01\"\n            max=\"0.99\"\n            step=\"0.01\"\n            value={likelihoodRedRight}\n            onChange={(e) => setLikelihoodRedRight(parseFloat(e.target.value))}\n            className=\"w-full h-2 bg-[#334155]/50 rounded\"\n          />\n        </div>\n\n        <div className=\"flex flex-col sm:flex-row sm:space-x-3\">\n          <button\n            onClick={handlePlayPause}\n            className=\"flex-1 py-2 px-4 bg-[#38bdf8]/20 hover:bg-[#38bdf8]/30 text-[#38bdf8] font-medium rounded-lg transition-colors border border-[#38bdf8]/50\"\n          >\n            {isPlaying ? \"Pause\" : \"Play\"}\n          </button>\n          <button\n            onClick={handleReset}\n            className=\"flex-1 py-2 px-4 bg-[#64748b]/20 hover:bg-[#64748b]/30 text-[#64748b] font-medium rounded-lg transition-colors border border-[#64748b]/50\"\n          >\n            Reset to Defaults\n          </button>\n        </div>\n      </div>\n\n      <div className=\"mt-8 space-y-4\">\n        {pedagogicalCallouts.map((callout) => (\n          <div\n            key={callout.step}\n            className=\"bg-[#1e293b]/50 backdrop-blur-sm rounded-xl p-5 border border-[#334155]/50\"\n          >\n            <div className=\"flex items-start gap-3\">\n              <div className=\"flex-shrink-0 bg-[#38bdf8]/20 text-[38bdf8] w-8 h-8 flex items-center justify-center rounded-md mt-0.5\">\n                {callout.step}\n              </div>\n              <div>\n                <h3 className=\"font-semibold text-lg mb-1\">{callout.title}</h3>\n                <p className=\"text-sm text-[#94a3b8] leading-relaxed\">{callout.text}</p>\n              </div>\n            </div>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n}";
+      try {
+        const compiled = Babel.transform(sourceCode, { presets: [['react', { runtime: 'classic' }]] }).code;
+        
+        // Error Boundary definition in classic React
+        const ErrorBoundary = class extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+          }
+          static getDerivedStateFromError(error) {
+            return { hasError: true, error: error };
+          }
+          componentDidCatch(error, errorInfo) {
+            console.error('ErrorBoundary Caught Lifecycle Error:', error, errorInfo);
+          }
+          render() {
+            if (this.state.hasError) {
+              return React.createElement('div', {
+                style: { background: '#1e1e2e', border: '1px solid #ef4444', borderRadius: '8px', padding: '24px', margin: '20px', fontFamily: 'monospace', color: '#f87171' }
+              }, [
+                React.createElement('h2', { key: 'h2', style: { marginTop: 0, color: '#ef4444' } }, '⚠️ Simulation Component Error'),
+                React.createElement('p', { key: 'p' }, String(this.state.error?.message || this.state.error)),
+                React.createElement('pre', { key: 'pre', style: { background: '#0f0f17', padding: '12px', borderRadius: '4px', overflowX: 'auto', color: '#e2e8f0', marginTop: '12px' } }, String(this.state.error?.stack || this.state.error))
+              ]);
+            }
+            return this.props.children;
+          }
+        };
+
+        const runner = new Function(
+          'React', 'ReactDOM', 'gsap', 'THREE', 'ErrorBoundary',
+          `const { useState, useEffect, useRef, useMemo, useCallback } = React;\n` +
+          compiled +
+          `\nReactDOM.createRoot(document.getElementById('root')).render(
+            React.createElement(ErrorBoundary, null, React.createElement(BayesTheoremConditionalProbabilitySimulation))
+          );`
+        );
+        runner(window.React, window.ReactDOM, window.gsap, window.THREE, ErrorBoundary);
+      } catch (err) {
+        console.error('Simulation Mount / Transpilation Error:', err);
+        const errBox = document.getElementById('error-container');
+        if (errBox) {
+          errBox.innerHTML = `
+            <div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">
+              <h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Transpilation / Runtime Error</h2>
+              <p><strong>Error:</strong> ${err.message}</p>
+              <pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">${err.stack || err.toString()}</pre>
+            </div>
+          `;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

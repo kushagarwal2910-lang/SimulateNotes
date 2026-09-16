@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbital Mechanics: Kepler's Laws & Gravitational Escape Dynamics</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 3 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo, useCallback } = React;
+    const gsap = window.gsap;
+
+
+
+
+const G = 1; // Gravitational constant in simulation units
+
+function GravitationalOrbitMechanicsSimulation() {
+  // State for sliders
+  const [starMass, setStarMass] = useState(1.0);
+  const [initialDistance, setInitialDistance] = useState(200);
+  const [initialVelocity, setInitialVelocity] = useState(4.5);
+  const [eccentricity, setEccentricity] = useState(0.45);
+  const [trailLength, setTrailLength] = useState(80);
+  
+  // UI state
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [showVectors, setShowVectors] = useState(true);
+  const [showEnergyGauge, setShowEnergyGauge] = useState(true);
+  
+  // Refs
+  const containerRef = useRef(null);
+  const planetRef = useRef(null);
+  const velocityVectorRef = useRef(null);
+  const gravityVectorRef = useRef(null);
+  const energyGaugeRef = useRef(null);
+  
+  // Physics state
+  const [position, setPosition] = useState({ x: -initialDistance, y: 0 });
+  const [velocity, setVelocity] = useState({ x: 0, y: initialVelocity });
+  const [trail, setTrail] = useState([]); // Array of {x, y, opacity}
+  
+  // Derived physics (reference orbit)
+  const derived = useMemo(() => {
+    const a = initialDistance / (1 - eccentricity);
+    const b = a * Math.sqrt(1 - eccentricity * eccentricity);
+    const periapsisR = a * (1 - eccentricity);
+    const apoapsisR = a * (1 + eccentricity);
+    const vPeriapsis = Math.sqrt(G * starMass * (1 + eccentricity) / (a * (1 - eccentricity)));
+    const vApoapsis = Math.sqrt(G * starMass * (1 - eccentricity) / (a * (1 + eccentricity)));
+    const escapeSpeed = Math.sqrt(2 * G * starMass / periapsisR);
+    const period = 2 * Math.PI * Math.sqrt(Math.pow(a, 3) / (G * starMass));
+    return { a, b, periapsisR, apoapsisR, vPeriapsis, vApoapsis, escapeSpeed, period };
+  }, [starMass, initialDistance, eccentricity]);
+  
+  // Initialize simulation
+  useEffect(() => {
+    resetOrbit();
+  }, []);
+  
+  // Reset orbit to initial conditions
+  const resetOrbit = () => {
+    setPosition({ x: -initialDistance, y: 0 });
+    setVelocity({ x: 0, y: initialVelocity });
+    setTrail([]);
+  };
+  
+  // GSAP ticker for physics update
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      let lastTime = performance.now();
+      
+      const updatePhysics = (time) => {
+        const dt = Math.min((time - lastTime) / 1000, 0.1); // Cap dt at 100ms
+        lastTime = time;
+        
+        if (!isPlaying) return;
+        
+        // Current state
+        const { x, y } = position;
+        const { vx, vy } = velocity;
+        const r = Math.sqrt(x * x + y * y);
+        
+        // Gravitational acceleration (towards origin)
+        const ax = -G * starMass * x / Math.pow(r, 3);
+        const ay = -G * starMass * y / Math.pow(r, 3);
+        
+        // Velocity Verlet integration
+        const newX = x + vx * dt + 0.5 * ax * dt * dt;
+        const newY = y + vy * dt + 0.5 * ay * dt * dt;
+        
+        const newR = Math.sqrt(newX * newX + newY * newY);
+        const newAx = -G * starMass * newX / Math.pow(newR, 3);
+        const newAy = -G * starMass * newY / Math.pow(newR, 3);
+        
+        const newVx = vx + 0.5 * (ax + newAx) * dt;
+        const newVy = vy + 0.5 * (ay + newAy) * dt;
+        
+        // Update state
+        setPosition({ x: newX, y: newY });
+        setVelocity({ x: newVx, y: newVy });
+        
+        // Update trail
+        const newTrail = [...trail, { x: newX, y: newY, opacity: 1 }];
+        if (newTrail.length > trailLength) newTrail.shift();
+        // Fade old trail points
+        const fadedTrail = newTrail.map((p, i) => ({
+          ...p,
+          opacity: (i + 1) / newTrail.length
+        }));
+        setTrail(fadedTrail);
+      };
+      
+      const tick = (time) => updatePhysics(time);
+      gsap.ticker.add(tick);
+      return () => gsap.ticker.remove(tick);
+    }, containerRef);
+    
+    return () => ctx.revert();
+  }, [isPlaying, trailLength, starMass, initialDistance, initialVelocity]);
+  
+  // Sliders change handler
+  const handleSliderChange = (param, value) => {
+    switch (param) {
+      case 'starMass': setStarMass(parseFloat(value)); break;
+      case 'initialDistance': setInitialDistance(parseFloat(value)); break;
+      case 'initialVelocity': setInitialVelocity(parseFloat(value)); break;
+      case 'eccentricity': setEccentricity(parseFloat(value)); break;
+      case 'trailLength': setTrailLength(parseInt(value)); break;
+      default: break;
+    }
+    if (param !== 'trailLength') resetOrbit();
+  };
+  
+  // Play/pause toggle
+  const togglePlay = () => setIsPlaying(!isPlaying);
+  
+  // Toggle vectors
+  const toggleVectors = () => setShowVectors(!showVectors);
+  
+  // Toggle energy gauge
+  const toggleEnergyGauge = () => setShowEnergyGauge(!showEnergyGauge);
+  
+  // Telemetry calculations
+  const currentVelocity = Math.sqrt(velocity.x ** 2 + velocity.y ** 2);
+  const distanceToStar = Math.sqrt(position.x ** 2 + position.y ** 2);
+  
+  return (
+    <div style={{ 
+      position: 'relative', 
+      width: '100%', 
+      height: '100vh', 
+      background: '#070913', 
+      color: '#e2e8f0', 
+      fontFamily: 'sans-serif',
+      overflow: 'hidden'
+    }}>
+      {/* SVG Container */}
+      <div ref={containerRef} style={{ 
+        position: 'absolute', 
+        top: '50%', 
+        left: '50%', 
+        transform: 'translate(-50%, -50%)', 
+        width: 920, 
+        height: 380 
+      }}>
+        <svg width="920" height="380" viewBox="0 0 920 380" style={{ 
+          background: '#070913' 
+        }}>
+          {/* Reference Orbit Ellipse */}
+          <path
+            d={`M ${460 + derived.a} 200 
+               A ${derived.a} ${derived.b} 0 0 1 ${460 - derived.a} 200 
+               A ${derived.a} ${derived.b} 0 0 0 ${460 + derived.a} 200 Z`}
+            fill="none"
+            stroke="#60a5fa"
+            strokeWidth={1}
+            strokeDasharray="5,5"
+            opacity={0.25}
+          />
+          
+          {/* Star */}
+          <defs>
+            <radialGradient id="starGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style={{ stopColor: '#fbbf24' }} />
+              <stop offset="70%" style={{ stopColor: '#fbbf24', stopOpacity: 0.8 }} />
+              <stop offset="100%" style={{ stopColor: '#f59e0b', stopOpacity: 0 }} />
+            </radialGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <circle 
+            cx="460" 
+            cy="200" 
+            r={12 + starMass * 3} 
+            fill="url(#starGrad)"
+            filter="url(#glow)"
+          />
+          
+          {/* Planet */}
+          <circle 
+            ref={planetRef}
+            cx={460 + position.x}
+            cy={200 - position.y} 
+            r={8}
+            fill="#38bdf8"
+          />
+          
+          {/* Trail */}
+          {trail.map((point, index) => (
+            <circle
+              key={index}
+              cx={460 + point.x}
+              cy={200 - point.y}
+              r={3}
+              fill="#60a5fa"
+              opacity={point.opacity * 0.6}
+            />
+          ))}
+          
+          {/* Velocity Vector */}
+          {showVectors && (
+            <>
+              <line
+                ref={velocityVectorRef}
+                x1={460 + position.x}
+                y1={200 - position.y}
+                x2={460 + position.x + velocity.x * 3}
+                y2={200 - position.y - velocity.y * 3}
+                stroke="#34d399"
+                strokeWidth={2}
+                markerEnd="url(#arrowhead)"
+              />
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                  refX="0" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+                </marker>
+              </defs>
+            </>
+          )}
+          
+          {/* Gravity Vector */}
+          {showVectors && (
+            <>
+              <line
+                ref={gravityVectorRef}
+                x1={460 + position.x}
+                y1={200 - position.y}
+                x2={460}
+                y2={200}
+                stroke="#f87171"
+                strokeWidth={2}
+                markerEnd="url(#gravityArrow)"
+              />
+              <defs>
+                <marker id="gravityArrow" markerWidth="10" markerHeight="7" 
+                  refX="0" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#f87171" />
+                </marker>
+              </defs>
+            </>
+          )}
+          
+          {/* Energy Gauge */}
+          {showEnergyGauge && (
+            <g ref={energyGaugeRef}>
+              {/* Background */}
+              <rect x="20" y="340" width="200" height="20" 
+                fill="rgba(30, 41, 59, 0.5)" rx="4" />
+              {/* KE Bar */}
+              <rect 
+                x="20" 
+                y="340" 
+                width={Math.min(200 * (0.5 * currentVelocity ** 2) / (0.5 * derived.vPeriapsis ** 2), 200)} 
+                height="20" 
+                fill="#34d399"
+                rx="4"
+              />
+              {/* PE Bar */}
+              <rect 
+                x="20" 
+                y="340" 
+                width={Math.min(200 * (starMass / distanceToStar) / (starMass / derived.periapsisR), 200)} 
+                height="20" 
+                fill="#f87171"
+                rx="4"
+              />
+              <text x="120" y="355" textAnchor="middle" fontSize="12" fill="#e2e8f0">
+                KE (green) vs PE (red)
+              </text>
+            </g>
+          )}
+        </svg>
+      </div>
+      
+      {/* Controls Panel */}
+      <div style={{ 
+        position: 'fixed', 
+        top: '20px', 
+        left: '20px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '16px',
+        background: 'rgba(15, 23, 42, 0.8)', 
+        padding: '16px', 
+        borderRadius: '8px',
+        backdropFilter: 'blur(4px)',
+        border: '1px solid rgba(148, 163, 184, 0.2)'
+      }}>
+        <div>
+          <label>Star Mass (M)</label>
+          <input 
+            type="range" 
+            min={0.5} 
+            max={3.0} 
+            step={0.1} 
+            value={starMass} 
+            onChange={(e) => handleSliderChange('starMass', e.target.value)}
+          />
+          <span>{starMass.toFixed(2)} M☉</span>
+        </div>
+        <div>
+          <label>Orbital Eccentricity (e)</label>
+          <input 
+            type="range" 
+            min={0.0} 
+            max={0.85} 
+            step={0.05} 
+            value={eccentricity} 
+            onChange={(e) => handleSliderChange('eccentricity', e.target.value)}
+          />
+          <span>{eccentricity.toFixed(2)}</span>
+        </div>
+        <div>
+          <label>Tangential Velocity</label>
+          <input 
+            type="range" 
+            min={1.5} 
+            max={8.0} 
+            step={0.2} 
+            value={initialVelocity} 
+            onChange={(e) => handleSliderChange('initialVelocity', e.target.value)}
+          />
+          <span>{initialVelocity.toFixed(2)} km/s</span>
+        </div>
+        <div>
+          <label>Trail Length</label>
+          <input 
+            type="range" 
+            min={20}
+            max={150}
+            step={1}
+            value={trailLength}
+            onChange={(e) => handleSliderChange('trailLength', e.target.value)}
+          />
+          <span>{trailLength}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={togglePlay} style={{ 
+            padding: '8px 16px', 
+            background: isPlaying ? '#059669' : '#dc2626', 
+            color: 'white', 
+            border: 'none', 
+            borderRadius: '4px', 
+            cursor: 'pointer'
+          }}>
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={toggleVectors} style={{ 
+              padding: '8px 16px', 
+              background: showVectors ? '#059669' : '#6b7280', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer'
+            }}>
+              Vectors
+            </button>
+            <button onClick={toggleEnergyGauge} style={{ 
+              padding: '8px 16px', 
+              background: showEnergyGauge ? '#059669' : '#6b7280', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer'
+            }}>
+              Energy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<GravitationalOrbitMechanicsSimulation />);
+  </script>
+</body>
+</html>

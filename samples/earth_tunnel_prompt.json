@@ -1,0 +1,267 @@
+{
+  "simulation_id": "earth_gravity_tunnel",
+  "title": "Earth Gravity Tunnel: Physics, Forces, and Lethal Effects of Drilling Through the Core",
+  "topic": "Classical Mechanics, Newton's Shell Theorem, Geophysics & Orbital Dynamics",
+  "pedagogical_goal": "Visually and quantitatively demonstrate the physics of drilling a straight borehole through the Earth and falling through it. Compare the idealized 42-minute Simple Harmonic Motion (Hooke's Law & Shell Theorem) against brutal real-world physical constraints: the Coriolis deflection that slams you into the tunnel wall, the 6,000°C core temperatures that vaporize matter, the 3.6 million atmosphere lithostatic pressure that crushes tunnel walls, and the exponential air column density that traps you in eternal weightless stagnation at the core.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Newton's Shell Theorem: Gravitational force inside a symmetric sphere depends only on enclosed mass: g(r) = G * M(r) / r²",
+      "Uniform Density Earth Model: g(r) = g₀ * (r / R_earth), producing Simple Harmonic Motion with period T = 2π * √(R_earth / g₀) ≈ 84.4 minutes (one-way transit = 42.2 minutes)",
+      "Realistic PREM (Preliminary Reference Earth Model): Core density (13 g/cm³) exceeds mantle (4.5 g/cm³), causing g(r) to peak at 10.7 m/s² at the core-mantle boundary (one-way transit = 38.2 minutes)",
+      "Conservation of Mechanical Energy (Vacuum): E_total = (1/2)mv² + U(r) = constant; Maximum velocity at core v_max = √(g₀ * R_earth) ≈ 7,900 m/s (28,440 km/h or Mach 23)",
+      "Coriolis Deflection: a_coriolis = -2 * (Ω_earth × v_fall); At non-polar latitudes, eastward surface velocity (up to 465 m/s) pushes falling bodies into the eastern wall",
+      "Atmospheric Drag & Hyper-Baric Density: If open to air, F_drag = (1/2) * ρ(r) * v² * C_d * A causes terminal velocity to collapse, permanently trapping the traveler at the center (r = 0)",
+      "Geothermal Gradient & Hydrostatic Lithostatic Pressure: P_core ≈ 360 GPa (3.6 million atmospheres), T_core ≈ 6,000°C"
+    ],
+    "constants": {
+      "earth_radius_km": 6371.0,
+      "surface_gravity": 9.80665,
+      "earth_rotation_rad_s": 7.292115e-5,
+      "equatorial_surface_speed_mps": 465.1,
+      "core_temperature_c": 5700.0,
+      "core_pressure_gpa": 360.0
+    },
+    "variables": {
+      "tunnel_condition": {
+        "name": "Tunnel Atmosphere & Levitation",
+        "default": "vacuum_maglev",
+        "options": [
+          {
+            "label": "Ideal Vacuum Tube + MagLev (Hypothetical Transit)",
+            "value": "vacuum_maglev",
+            "drag_coeff": 0.0,
+            "coriolis_compensated": true,
+            "description": "Evacuated vacuum tunnel with active electromagnetic guidance cancelling Coriolis drift and zero air resistance."
+          },
+          {
+            "label": "Open Air-Filled Borehole (Realistic Air Drag)",
+            "value": "air_filled",
+            "drag_coeff": 0.47,
+            "coriolis_compensated": true,
+            "description": "Atmosphere fills the shaft. Falling traveler reaches terminal velocity, decelerating to a dead stop floating at the core."
+          },
+          {
+            "label": "Unshielded Equatorial Borehole (Coriolis Wall Collision)",
+            "value": "coriolis_collision",
+            "drag_coeff": 0.0,
+            "coriolis_compensated": false,
+            "description": "Drilled at the equator without magnetic stabilization; Earth's eastward spin slams the capsule into the rock wall at hypersonic speed."
+          }
+        ]
+      },
+      "gravity_model": {
+        "name": "Earth Density Profile",
+        "default": "prem_realistic",
+        "options": [
+          {
+            "label": "Realistic PREM Profile (Dense Core, 38 min transit)",
+            "value": "prem_realistic"
+          },
+          {
+            "label": "Uniform Density (Hooke's Law SHM, 42 min transit)",
+            "value": "uniform_density"
+          }
+        ]
+      },
+      "tunnel_latitude": {
+        "name": "Drill Latitude",
+        "default": "equator",
+        "options": [
+          {
+            "label": "Equator (0° - Maximum Coriolis Drift of 465 m/s)",
+            "value": "equator",
+            "coriolis_factor": 1.0
+          },
+          {
+            "label": "Mid-Latitude (45° - Moderate Coriolis Drift)",
+            "value": "mid_latitude",
+            "coriolis_factor": 0.707
+          },
+          {
+            "label": "North-South Poles (90° - Zero Coriolis Effect)",
+            "value": "poles",
+            "coriolis_factor": 0.0
+          }
+        ]
+      },
+      "simulation_speed": {
+        "name": "Simulation Playback Rate",
+        "default": 10,
+        "unit": "x",
+        "min": 1,
+        "max": 60,
+        "step": 1
+      }
+    },
+    "derived_formulas": {
+      "normalized_depth": "Math.abs(current_y) / R_earth",
+      "radius_from_center_km": "Math.abs(R_earth - current_depth_km)",
+      "local_gravity_mps2": "gravity_model === 'uniform_density' ? surface_gravity * (radius_from_center_km / R_earth) : (radius_from_center_km > 3480 ? (surface_gravity * (0.95 + 0.15 * (6371 - radius_from_center_km)/2891)) : (10.7 * (radius_from_center_km / 3480)))",
+      "local_temperature_c": "radius_from_center_km > 3480 ? (20 + (5700 - 20) * Math.pow((6371 - radius_from_center_km)/2891, 0.7)) : 5700",
+      "local_pressure_gpa": "360.0 * (1.0 - Math.pow(radius_from_center_km / 6371, 1.6))",
+      "transit_progress_pct": "((current_depth_km) / (2 * 6371)) * 100",
+      "coriolis_drift_m": "tunnel_latitude === 'poles' ? 0 : (tunnel_condition === 'vacuum_maglev' ? 0 : (2/3) * earth_rotation_rad_s * Math.pow(fall_time_s, 2) * current_velocity_mps * Math.cos(latitude_rad))"
+    }
+  },
+  "visual_scene": {
+    "theme": "deep_space_planetary_core",
+    "background": "#070b14",
+    "viewBox": "0 0 940 460",
+    "accent_colors": {
+      "crust": "#78716c",
+      "upper_mantle": "#f97316",
+      "lower_mantle": "#dc2626",
+      "outer_core": "#eab308",
+      "inner_core": "#fef08a",
+      "tunnel_walls": "#38bdf8",
+      "capsule": "#34d399",
+      "coriolis_vector": "#f43f5e",
+      "gravity_vector": "#60a5fa",
+      "velocity_vector": "#a855f7"
+    },
+    "components": [
+      {
+        "id": "planetary_concentric_cross_section",
+        "type": "layered_svg_globe",
+        "description": "High-fidelity cutaway cross-section of planet Earth showing all major geochemical layers with glowing gradients: Crust (thin slate outer rim), Upper Mantle (plastic orange asthenosphere), Lower Mantle (dense magma crimson mesosphere), Outer Core (convective liquid nickel-iron generating Earth's magnetic lines), and Inner Core (blazing white-gold solid crystalline iron sphere)."
+      },
+      {
+        "id": "trans_earth_borehole_shaft",
+        "type": "vertical_diameter_tunnel",
+        "description": "Vertical straight shaft drilled from North surface (depth 0 km) directly through the planetary center (depth 6,371 km) to the antipodal South surface (depth 12,742 km). Features neon depth tick markers every 1,000 km."
+      },
+      {
+        "id": "falling_transit_capsule",
+        "type": "gsap_animated_capsule",
+        "description": "Dynamic transit pod falling along the shaft with particle wake. Shows glowing vector arrows for instantaneous velocity (v), gravitational acceleration (g), and transverse Coriolis deflection force."
+      },
+      {
+        "id": "realtime_depth_gauge",
+        "type": "vertical_depth_meter",
+        "description": "Dynamic depth HUD bar alongside the tunnel showing exact layer transitions (Crust, Moho, Asthenosphere, CMB at 2,890 km, Inner Core Boundary at 5,150 km, Center at 6,371 km)."
+      },
+      {
+        "id": "dynamic_hazard_status_banner",
+        "type": "contextual_alert_hud",
+        "description": "Live alert banner showing current physical phenomena: 'Freefall Acceleration', 'Extreme Thermal Influx (Rock Melts)', 'Crushing Lithostatic Core Pressure (360 GPa)', 'Gravitational Zero-Crossing (Weightlessness)', 'Decelerating Towards Antipode', or 'Fatal Coriolis Wall Impact'."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for container and SVG references",
+      "Use gsap.context() inside useEffect with return ctx.revert() cleanup",
+      "Use GSAP ticker with numerical integration (Verlet or Euler) to update capsule position, velocity, and elapsed transit timer",
+      "Animate convective fluid ripples in the liquid outer core layer using SVG filter turbulence or phase loops",
+      "Smoothly tween vector arrow lengths and telemetry gauge bars using gsap.to() with ease: 'power2.out'"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "tunnel_condition",
+      "label": "Atmosphere & Guidance",
+      "param": "tunnel_condition",
+      "type": "button_group",
+      "options": ["vacuum_maglev", "air_filled", "coriolis_collision"],
+      "description": "Switch between ideal vacuum transit (harmonic oscillation), realistic air-filled tunnel (air drag traps you at the center), and unguided equatorial drop (Coriolis force slams you into the rock wall)."
+    },
+    {
+      "id": "gravity_model",
+      "label": "Earth Density Model",
+      "param": "gravity_model",
+      "type": "button_group",
+      "options": ["prem_realistic", "uniform_density"],
+      "description": "Compare the uniform density Hooke's Law model (42 min transit) against the realistic PREM model with dense iron core (38 min transit)."
+    },
+    {
+      "id": "tunnel_latitude",
+      "label": "Tunnel Drilling Axis",
+      "param": "tunnel_latitude",
+      "type": "button_group",
+      "options": ["equator", "mid_latitude", "poles"],
+      "description": "Choose drilling location: North-South Poles eliminate Coriolis deflection completely, whereas Equatorial tunnels experience maximum sideways acceleration."
+    },
+    {
+      "id": "playback_controls",
+      "label": "Simulation State",
+      "param": "playback_state",
+      "type": "action_buttons",
+      "options": ["Drop / Resume", "Pause", "Reset to Surface"],
+      "description": "Release the capsule from the surface, pause at any geological layer to inspect physics readouts, or reset."
+    },
+    {
+      "id": "simulation_speed",
+      "label": "Time Warp Speed",
+      "param": "simulation_speed",
+      "type": "slider",
+      "unit": "x",
+      "min": 1,
+      "max": 60,
+      "step": 1,
+      "description": "Accelerate simulation time from real-time (1x) up to 60x speed to observe the complete 38–42 minute journey in seconds."
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "current_depth",
+      "label": "Current Depth",
+      "formula": "current_depth_km.toFixed(0)",
+      "unit": "km",
+      "description": "Distance from departure surface. Core center is located at 6,371 km."
+    },
+    {
+      "id": "current_velocity",
+      "label": "Velocity (Speed)",
+      "formula": "(current_velocity_mps * 3.6).toFixed(0)",
+      "unit": "km/h",
+      "description": "Current speed. Reaches a staggering 28,440 km/h (Mach 23) at Earth's center in a vacuum."
+    },
+    {
+      "id": "local_gravity",
+      "label": "Local Gravity g(r)",
+      "formula": "local_gravity_mps2.toFixed(2)",
+      "unit": "m/s²",
+      "description": "Gravitational pull exerted by the remaining mass beneath you. Drops to exactly 0.00 m/s² at the center."
+    },
+    {
+      "id": "ambient_temperature",
+      "label": "Ambient Temperature",
+      "formula": "local_temperature_c.toFixed(0)",
+      "unit": "°C",
+      "description": "Surrounding rock and molten core temperature. Reaches ~5,700°C (hotter than the surface of the Sun)."
+    },
+    {
+      "id": "ambient_pressure",
+      "label": "Lithostatic Pressure",
+      "formula": "local_pressure_gpa.toFixed(1)",
+      "unit": "GPa",
+      "description": "Surrounding rock pressure. 360 GPa is equivalent to 3.6 million atmospheric pressures."
+    },
+    {
+      "id": "elapsed_time",
+      "label": "Elapsed Transit Time",
+      "formula": "formatTime(elapsed_seconds)",
+      "unit": "min:sec",
+      "description": "Total elapsed time of the fall. Reaches core in ~19 minutes and antipodal exit in ~38.2 minutes."
+    }
+  ],
+  "educational_cards": [
+    {
+      "title": "Why Does Transit Take 38–42 Minutes? (Newton's Shell Theorem)",
+      "content": "By Newton's Shell Theorem, as you fall inside a planet, the entire spherical shell of matter above your current radius exerts zero net gravitational force on you—it pulls equally in all directions and cancels out! Only the smaller sphere of mass beneath you pulls you inward. In an idealized uniform Earth, this produces a restoring force strictly proportional to distance from the center (F = -kr), exactly like an ideal spring (Hooke's Law). The resulting Simple Harmonic Motion oscillation has a period of 84.4 minutes, meaning a one-way trip through Earth takes 42.2 minutes. With Earth's dense iron core (the realistic PREM model), gravity stays near 10 m/s² longer, speeding up the trip to 38.2 minutes!"
+    },
+    {
+      "title": "Killer #1: The Coriolis Deflection (The Eastward Wall Smash)",
+      "content": "Because Earth rotates from west to east, the ground at the equator moves eastward at 1,674 km/h (465 m/s). When you jump into an equatorial hole, you carry that 465 m/s eastward sideways momentum with you. But as you fall deeper toward the center, the surrounding rock closer to the axis moves much slower! By conservation of angular momentum, you travel eastward much faster than the shaft walls, slamming into the eastern wall at hundreds of kilometers per hour within minutes. The only way to fall straight through without hitting the wall is to drill precisely along Earth's rotational axis (North Pole to South Pole), or use active magnetic levitation tracks."
+    },
+    {
+      "title": "Killers #2 & #3: Hydrostatic Lithostatic Pressure & The 6,000°C Inferno",
+      "content": "Even if you could somehow drill a hole, keeping it open is physically impossible with any known material. At depths beyond just 10–15 km, rocks become soft and behave like viscous plastic putty under immense pressure. At the core-mantle boundary (2,890 km) and core (6,371 km), lithostatic pressure reaches 3.6 million atmospheres (360 GPa) and temperatures hit 5,700°C–6,000°C (hotter than the surface of the Sun). Solid rock and liquid iron would instantaneously crush the tunnel shut like water flooding an open pipe in the ocean."
+    },
+    {
+      "title": "Killer #4: Air Resistance & Weightless Core Stagnation",
+      "content": "What if you leave the tunnel open to the atmosphere? The weight of a 6,371 km tall column of air creates mind-boggling hyperbaric compression. At the core, atmospheric pressure would be so immense that air molecules would compress into a supercritical fluid denser than liquid water! Falling into this would not yield a hypersonic 28,000 km/h flight; instead, turbulent aerodynamic drag would quickly limit your speed to terminal velocity (~150–200 km/h) before air resistance slows you to a creeping crawl. You would oscillate a few times with decaying amplitude and end up permanently stuck, floating completely weightless at the center of the Earth, incinerated into ash."
+    }
+  ]
+}

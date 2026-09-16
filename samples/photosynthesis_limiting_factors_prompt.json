@@ -1,0 +1,165 @@
+{
+  "simulation_id": "photosynthesis_limiting_factors",
+  "title": "Photosynthesis Dynamics & Biochemical Limiting Factors Simulation",
+  "domain": "Plant Physiology, Bio-Energetics & Chloroplast Biochemistry",
+  "render_mode": "svg_2d",
+  "description": "An interactive, multi-scale biological simulation exploring how light intensity, wavelength, carbon dioxide concentration, ambient temperature, and water availability govern the photosynthetic rate according to Blackman's Law of Limiting Factors. Features a leaf cross-section with stomata guard cells, an organelle view of thylakoid granum stacks, and real-time enzyme kinetics for RuBisCO.",
+  "biological_model": {
+    "variables": {
+      "light_intensity_pct": 70,
+      "co2_concentration_ppm": 450,
+      "temperature_c": 26,
+      "water_availability_pct": 85,
+      "light_wavelength_mode": "full_spectrum"
+    },
+    "derived_formulas": {
+      "spectral_absorption_efficiency": "(light_wavelength_mode === 'red_blue' ? 0.96 : (light_wavelength_mode === 'green' ? 0.18 : 0.82))",
+      "effective_light_flux": "light_intensity_pct * spectral_absorption_efficiency",
+      "stomatal_aperture_um": "Math.max(1.0, (water_availability_pct / 100) * (temperature_c > 38 ? 0.35 : 1.0) * 12.0)",
+      "internal_co2_ci_ppm": "co2_concentration_ppm * (stomatal_aperture_um / 12.0) * 0.72",
+      "temperature_kinetic_factor": "Math.max(0.05, Math.exp(-Math.pow(temperature_c - 28.5, 2) / (temperature_c < 28.5 ? 180 : 75)))",
+      "light_dependent_rate": "(100 * effective_light_flux) / (effective_light_flux + 32)",
+      "light_independent_calvin_rate": "(100 * internal_co2_ci_ppm) / (internal_co2_ci_ppm + 180)",
+      "net_photosynthetic_rate_umol": "Math.min(light_dependent_rate, light_independent_calvin_rate) * temperature_kinetic_factor * (water_availability_pct > 20 ? 1.0 : 0.4)",
+      "o2_evolution_ml_hr": "net_photosynthetic_rate_umol * 0.48",
+      "glucose_synthesis_mg_hr": "net_photosynthetic_rate_umol * 0.36",
+      "rubisco_carboxylation_efficiency_pct": "Math.min(100, Math.max(5, temperature_kinetic_factor * (internal_co2_ci_ppm / (internal_co2_ci_ppm + 120)) * 100))",
+      "limiting_factor_label": "temperature_c < 14 ? 'Low Temperature (Kinetic Slowdown)' : (temperature_c > 38 ? 'High Temperature (Thermal Denaturation)' : (water_availability_pct < 35 ? 'Water Deficit (Stomatal Closure)' : (light_dependent_rate < light_independent_calvin_rate ? 'Light Intensity (Photon Flux)' : 'Carbon Dioxide (RuBisCO Substrate)')))"
+    }
+  },
+  "visual_scene": {
+    "viewBox": "0 0 960 480",
+    "theme": "dark_botanical_laboratory",
+    "components": [
+      {
+        "id": "leaf_anatomical_cross_section",
+        "description": "Multi-layer botanical cross-section showing upper waxy cuticle, transparent upper epidermis, columnar palisade mesophyll cells packed with green chloroplast organelles, spongy mesophyll with air spaces, and vascular bundle (xylem carrying water blue stream)."
+      },
+      {
+        "id": "stomatal_pore_guard_cells",
+        "description": "Lower epidermal cross-section featuring bilateral turgid/flaccid guard cells that physically dilate or constrict the stomatal pore aperture based on water availability and temperature stress, showing CO2 intake and O2/H2O transpiration."
+      },
+      {
+        "id": "chloroplast_thylakoid_organelle_zoom",
+        "description": "Circular high-magnification inset displaying a single chloroplast with double membrane, stroma fluid (site of Calvin cycle CO2 fixation), and stacked thylakoid grana discs (site of light absorption and photolysis)."
+      },
+      {
+        "id": "biochemical_particle_dynamics",
+        "description": "Animated particles: Yellow/blue photons raining onto the leaf surface, blue H2O molecules rising from xylem into mesophyll cells, grey CO2 molecules entering through stomata, and glowing cyan O2 bubbles evolving from chloroplasts."
+      },
+      {
+        "id": "limiting_factor_response_curve",
+        "description": "Live Cartesian coordinate mini-graph in the corner rendering Blackman's limiting curve with a dynamic glowing cursor pinpointing the current operating state and the plateau limit."
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "light_intensity_pct",
+      "label": "Light Intensity (PAR Flux)",
+      "type": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 70,
+      "unit": "% Sunlight"
+    },
+    {
+      "id": "co2_concentration_ppm",
+      "label": "CO₂ Concentration",
+      "type": "slider",
+      "min": 100,
+      "max": 1200,
+      "step": 50,
+      "default": 450,
+      "unit": "ppm"
+    },
+    {
+      "id": "temperature_c",
+      "label": "Ambient Temperature",
+      "type": "slider",
+      "min": 5,
+      "max": 50,
+      "step": 1,
+      "default": 26,
+      "unit": "°C"
+    },
+    {
+      "id": "water_availability_pct",
+      "label": "Soil Moisture / Water Availability",
+      "type": "slider",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "default": 85,
+      "unit": "% Field Capacity"
+    },
+    {
+      "id": "light_wavelength_mode",
+      "label": "Light Spectrum Wavelength",
+      "type": "select",
+      "options": [
+        {"value": "full_spectrum", "label": "Full Solar Spectrum (White)"},
+        {"value": "red_blue", "label": "Chlorophyll Absorption Peaks (Red 660nm + Blue 430nm)"},
+        {"value": "green", "label": "Reflected Green Spectrum (520-550nm - Low Absorption)"}
+      ],
+      "default": "full_spectrum"
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "photosynthetic_rate",
+      "label": "Net Photosynthetic Rate",
+      "unit": "μmol/m²/s",
+      "precision": 1
+    },
+    {
+      "id": "limiting_factor",
+      "label": "Active Limiting Factor",
+      "unit": "Blackman's Law",
+      "precision": 0
+    },
+    {
+      "id": "stomatal_aperture",
+      "label": "Stomatal Pore Aperture",
+      "unit": "μm",
+      "precision": 1
+    },
+    {
+      "id": "rubisco_activity",
+      "label": "RuBisCO Carboxylation Rate",
+      "unit": "% Optimal",
+      "precision": 1
+    },
+    {
+      "id": "o2_evolution",
+      "label": "O₂ Gas Evolution Rate",
+      "unit": "mL/hr",
+      "precision": 1
+    },
+    {
+      "id": "glucose_synthesis",
+      "label": "Hexose Sugar Production",
+      "unit": "mg/hr",
+      "precision": 1
+    }
+  ],
+  "educational_cards": [
+    {
+      "title": "Blackman's Law of Limiting Factors (1905)",
+      "content": "Proposed by British plant physiologist F.F. Blackman, this fundamental bio-energetic law states that when a physiological process is conditioned by several separate factors (such as light, CO2, and temperature), its overall rate is strictly governed by the slowest factor that is in shortest supply."
+    },
+    {
+      "title": "Light Intensity & the Thylakoid Photolysis Limit",
+      "content": "In the light-dependent reactions within thylakoid membranes, chlorophyll a and b absorb photons to excite electrons in Photosystem II (P680) and Photosystem I (P700), splitting water into O2, protons, and reducing power (ATP and NADPH). At low light, photon arrival limits the process; beyond the light saturation point, the Calvin cycle becomes the bottleneck."
+    },
+    {
+      "title": "RuBisCO Enzyme Kinetics & Carbon Fixation",
+      "content": "The enzyme Ribulose-1,5-bisphosphate carboxylase-oxygenase (RuBisCO) catalyzes the initial fixation of atmospheric CO2 into 3-phosphoglycerate inside the chloroplast stroma. Atmospheric CO2 (~420 ppm) is sub-saturating for C3 plants; enriching CO2 up to 800-1000 ppm accelerates carboxylation and suppresses wasteful photorespiration."
+    },
+    {
+      "title": "Thermal Denaturation & Stomatal Transpiration",
+      "content": "Photosynthetic enzymes exhibit an optimum temperature (typically 25-32°C). Below this, molecular kinetic energy is low; above 40°C, thermal denaturation destabilizes RuBisCO and membrane fluidity collapses. Concurrently, high heat and low soil moisture trigger abscisic acid (ABA), closing stomata to prevent dehydration, which starves the leaf of CO2."
+    }
+  ]
+}

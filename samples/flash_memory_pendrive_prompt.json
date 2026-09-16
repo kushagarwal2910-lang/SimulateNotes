@@ -1,0 +1,202 @@
+{
+  "simulation_id": "usb_flash_nand_memory",
+  "title": "NAND Flash Memory: Floating-Gate Quantum Tunneling & Physical Bit Storage in USB Drives",
+  "topic": "Solid-State Quantum Electronics & Non-Volatile Memory Physics",
+  "pedagogical_goal": "Demonstrate the atomic-scale physical mechanism of USB flash drives: how a Floating-Gate Transistor traps electrons via Fowler-Nordheim Quantum Tunneling through an 8nm SiO2 oxide barrier to store bits ('0' vs '1') non-volatiles without battery power, and how threshold voltage shift (Vth) is sensed during read operations.",
+  "physics_model": {
+    "quantum_and_electrostatic_laws": [
+      "Fowler-Nordheim Quantum Tunneling Current: J_FN = A * E^2 * exp(-B / E)",
+      "Threshold Voltage Shift: Delta_Vth = Q_fg / C_pp = (q * N_electrons) / C_pp",
+      "MOSFET Channel Current: I_ds = mu * C_ox * (W/L) * (V_cg - V_th)^2 when V_cg > V_th, else 0",
+      "Gauss's Law & Electrostatic Shielding: E_channel = (V_cg - q * N_e / C_fg) / d_dielectric"
+    ],
+    "variables": {
+      "mode": {"name": "Operation Mode", "default": "read", "type": "select", "options": ["read", "program", "erase"]},
+      "control_gate_voltage": {"name": "Control Gate Voltage (Vcg)", "default": 2.5, "unit": "V", "min": -20.0, "max": 20.0, "step": 0.5},
+      "stored_charge_level": {"name": "Stored Electron Density", "default": 750, "unit": "electrons", "min": 0, "max": 1200, "step": 50},
+      "tunnel_oxide_thickness": {"name": "Tunnel Oxide Thickness (d_ox)", "default": 8.0, "unit": "nm", "min": 6.0, "max": 12.0, "step": 0.5},
+      "temperature": {"name": "Operating Temperature", "default": 25, "unit": "°C", "min": -20, "max": 85, "step": 5}
+    },
+    "derived_formulas": {
+      "base_threshold_voltage": "1.5",
+      "threshold_voltage_shift": "(stored_charge_level * 1.6e-19) / 6.0e-17 * 1000",
+      "effective_vth": "1.5 + (stored_charge_level / 300)",
+      "electric_field_oxide": "Math.abs(control_gate_voltage) / (tunnel_oxide_thickness * 1e-7)",
+      "is_tunneling_active": "Math.abs(control_gate_voltage) >= 12.0",
+      "channel_conducts": "control_gate_voltage > (1.5 + (stored_charge_level / 300))",
+      "channel_current_ua": "control_gate_voltage > (1.5 + (stored_charge_level / 300)) ? Math.pow(control_gate_voltage - (1.5 + (stored_charge_level / 300)), 2) * 18.5 : 0.0",
+      "sensed_binary_bit": "stored_charge_level >= 350 ? 0 : 1",
+      "charge_retention_years": "stored_charge_level > 0 ? (10.0 * Math.exp(0.4 * (1 - (temperature - 25) / 100))).toFixed(1) : 'N/A'"
+    }
+  },
+  "visual_scene": {
+    "theme": "dark_modern_laboratory",
+    "background": "#070913",
+    "accent_colors": {
+      "control_gate": "#6366f1",
+      "blocking_oxide": "#334155",
+      "floating_gate": "#f59e0b",
+      "tunnel_oxide": "#38bdf8",
+      "p_substrate": "#1e293b",
+      "n_source_drain": "#10b981",
+      "trapped_electron": "#fbbf24",
+      "channel_electron": "#34d399",
+      "electric_field_vector": "#ef4444",
+      "quantum_tunnel_stream": "#a855f7"
+    },
+    "components": [
+      {
+        "id": "transistor_cross_section",
+        "type": "SVG_layered_semiconductor",
+        "viewBox": "0 0 920 400",
+        "layers": [
+          {"id": "control_gate_metal", "label": "Control Gate (Word Line Vcg)", "y": 40, "height": 35, "color": "#6366f1"},
+          {"id": "interpoly_dielectric", "label": "Inter-Poly Dielectric (IPD Blocking Oxide)", "y": 75, "height": 25, "color": "#334155"},
+          {"id": "floating_gate_polysilicon", "label": "Isolated Floating Gate (Traps Electrons)", "y": 100, "height": 45, "color": "#f59e0b"},
+          {"id": "tunnel_oxide_barrier", "label": "Tunnel Oxide Barrier (8nm SiO2)", "y": 145, "height": 22, "color": "rgba(56, 189, 248, 0.3)"},
+          {"id": "silicon_channel", "label": "Inversion Channel Region", "y": 167, "height": 30, "color": "#0f172a"},
+          {"id": "source_n_plus", "label": "Source (N+)", "x": 120, "y": 170, "width": 140, "height": 60, "color": "#059669"},
+          {"id": "drain_n_plus", "label": "Drain (Bit Line N+)", "x": 660, "y": 170, "width": 140, "height": 60, "color": "#059669"},
+          {"id": "p_substrate_bulk", "label": "P-type Silicon Substrate", "y": 230, "height": 130, "color": "#1e293b"}
+        ]
+      },
+      {
+        "id": "electron_cloud_display",
+        "type": "trapped_particles",
+        "description": "Golden glowing electron particles trapped inside the floating gate rectangle, increasing in density as stored charge increases."
+      },
+      {
+        "id": "tunneling_stream_arrows",
+        "type": "quantum_probability_wave",
+        "description": "Purple wave arrows showing Fowler-Nordheim quantum tunneling through the 8nm oxide barrier during write (+18V) or erase (-20V)."
+      },
+      {
+        "id": "channel_current_flow",
+        "type": "green_electron_stream",
+        "description": "Green conduction electrons flowing from Source to Drain through the inversion channel when Vcg > Vth during Read mode."
+      },
+      {
+        "id": "energy_band_diagram",
+        "type": "conduction_band_profile",
+        "description": "Small side graph showing the energy barrier tilt under high electric field, illustrating quantum wave penetration."
+      }
+    ]
+  },
+  "gsap_animation_spec": {
+    "tickers": [
+      {
+        "name": "quantum_tunneling_loop",
+        "description": "Smooth vertical animation of electrons tunneling through tunnel oxide when |Vcg| >= 12V (upward for program, downward for erase)."
+      },
+      {
+        "name": "source_drain_conduction_loop",
+        "description": "Continuous horizontal animation of conduction electrons flowing from Source through the channel to Drain when channel_conducts is true."
+      },
+      {
+        "name": "floating_gate_glow_pulse",
+        "description": "Pulsing electrostatic glow around the floating gate proportional to trapped electron density."
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "mode_selector",
+      "type": "button_group",
+      "label": "Flash Operation Mode",
+      "options": [
+        {"value": "read", "label": "1. READ Cell (Vcg = +2.5V)"},
+        {"value": "program", "label": "2. PROGRAM (Write '0', +18V Tunneling)"},
+        {"value": "erase", "label": "3. ERASE (Reset '1', -20V Tunneling)"}
+      ],
+      "default": "read"
+    },
+    {
+      "id": "control_gate_voltage",
+      "type": "range",
+      "label": "Control Gate Voltage (Vcg)",
+      "default": 2.5,
+      "min": -20.0,
+      "max": 20.0,
+      "step": 0.5,
+      "unit": "V"
+    },
+    {
+      "id": "stored_charge_level",
+      "type": "range",
+      "label": "Trapped Electrons (Floating Gate Charge)",
+      "default": 750,
+      "min": 0,
+      "max": 1200,
+      "step": 50,
+      "unit": "e-"
+    },
+    {
+      "id": "tunnel_oxide_thickness",
+      "type": "range",
+      "label": "Tunnel Oxide Thickness (d_ox)",
+      "default": 8.0,
+      "min": 6.0,
+      "max": 12.0,
+      "step": 0.5,
+      "unit": "nm"
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "stored_bit",
+      "label": "Sensed Binary Bit",
+      "formula": "stored_charge_level >= 350 ? '0' (Programmed) : '1' (Erased)",
+      "unit": "Logic State",
+      "description": "State '0' corresponds to trapped electrons shielding the gate; '1' corresponds to empty floating gate."
+    },
+    {
+      "id": "threshold_voltage",
+      "label": "Threshold Voltage (Vth)",
+      "formula": "1.5 + (stored_charge_level / 300)",
+      "unit": "V",
+      "description": "Minimum gate voltage required to invert channel. Trapped electrons shift Vth from ~1.5V up to ~5.5V."
+    },
+    {
+      "id": "channel_state",
+      "label": "Channel Conduction",
+      "formula": "Vcg > Vth ? 'CONDUCTING (Current Detected)' : 'PINCHED-OFF (No Current)'",
+      "unit": "State",
+      "description": "Sense amplifier at Bit Line measures whether current flows to determine 1 vs 0."
+    },
+    {
+      "id": "read_current",
+      "label": "Source-Drain Current (Ids)",
+      "formula": "channel_current_ua.toFixed(1)",
+      "unit": "µA",
+      "description": "Conduction current detected by the USB drive's sense amplifier."
+    },
+    {
+      "id": "oxide_field",
+      "label": "Oxide Electric Field (E_ox)",
+      "formula": "electric_field_oxide.toFixed(2)",
+      "unit": "MV/cm",
+      "description": "Fields exceeding ~10 MV/cm trigger Fowler-Nordheim quantum tunneling through the energy barrier."
+    },
+    {
+      "id": "data_retention",
+      "label": "Estimated Data Retention",
+      "formula": "charge_retention_years",
+      "unit": "Years",
+      "description": "Isolated by high-energy SiO2 barriers (3.1 eV), trapped electrons remain stable for decades without power."
+    }
+  ],
+  "educational_callouts": [
+    {
+      "title": "Why It Never Forgets (Non-Volatile)",
+      "text": "Unlike RAM which needs continuous electricity to refresh capacitor charge, the Floating Gate is completely surrounded by glass-like silicon dioxide insulators. The 3.1 eV energy barrier is so high that trapped electrons cannot escape at room temperature for over 10 to 50 years."
+    },
+    {
+      "title": "Quantum Tunneling vs Classical Physics",
+      "text": "Classically, electrons cannot climb over the 3.1 eV SiO2 barrier with normal thermal energy. Under high voltage (18V), the oxide band tilts so sharply that the barrier thickness narrows to a few nanometers. Electrons exploit quantum mechanical wave-particle duality to tunnel directly through the barrier into the floating gate."
+    },
+    {
+      "title": "How a Pendrive Reads a Bit",
+      "text": "The USB memory controller applies a gentle read voltage of +2.5V to the control gate. If electrons are trapped (Bit 0), their negative charge repels electrons in the silicon below, preventing a channel and yielding 0 µA current. If the gate is empty (Bit 1), the +2.5V attracts electrons, turning the transistor ON and conducting current."
+    }
+  ]
+}

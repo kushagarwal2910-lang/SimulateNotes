@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stomach Gastric Acid Digestion & Enzyme Dynamics</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP 3 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- React 18 & ReactDOM 18 CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel Standalone CDN -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="error-container"></div>
+  <script>
+    window.addEventListener('error', function(event) {
+      console.error('Global Window Error:', event);
+      var errBox = document.getElementById('error-container');
+      if (errBox) {
+        var msg = event.message || (event.error && event.error.message) || 'Unknown error';
+        var stack = (event.error && event.error.stack) || (event.filename + ':' + event.lineno);
+        errBox.innerHTML = '<div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">' +
+          '<h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Runtime Error</h2>' +
+          '<p><strong>Error:</strong> ' + msg + '</p>' +
+          '<pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">' + stack + '</pre>' +
+          '</div>';
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const response = await fetch('StomachAcidDigestionSimulation.jsx');
+        const sourceCode = await response.text();
+        const compiled = Babel.transform(sourceCode, { presets: [['react', { runtime: 'classic' }]] }).code;
+
+        const ErrorBoundary = class extends React.Component {
+          constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+          }
+          static getDerivedStateFromError(error) {
+            return { hasError: true, error: error };
+          }
+          componentDidCatch(error, errorInfo) {
+            console.error('ErrorBoundary Caught Lifecycle Error:', error, errorInfo);
+          }
+          render() {
+            if (this.state.hasError) {
+              return React.createElement('div', {
+                style: { background: '#1e1e2e', border: '1px solid #ef4444', borderRadius: '8px', padding: '24px', margin: '20px', fontFamily: 'monospace', color: '#f87171' }
+              }, [
+                React.createElement('h2', { key: 'h2', style: { marginTop: 0, color: '#ef4444' } }, '⚠️ Simulation Component Error'),
+                React.createElement('p', { key: 'p' }, String(this.state.error?.message || this.state.error)),
+                React.createElement('pre', { key: 'pre', style: { background: '#0f0f17', padding: '12px', borderRadius: '4px', overflowX: 'auto', color: '#e2e8f0', marginTop: '12px' } }, String(this.state.error?.stack || this.state.error))
+              ]);
+            }
+            return this.props.children;
+          }
+        };
+
+        const runner = new Function(
+          'React', 'ReactDOM', 'gsap', 'ErrorBoundary',
+          `const { useState, useEffect, useRef, useMemo, useCallback } = React;\n` +
+          compiled +
+          `\nReactDOM.createRoot(document.getElementById('root')).render(
+            React.createElement(ErrorBoundary, null, React.createElement(StomachAcidDigestionSimulation))
+          );`
+        );
+        runner(window.React, window.ReactDOM, window.gsap, ErrorBoundary);
+      } catch (err) {
+        console.error('Simulation Mount / Transpilation Error:', err);
+        const errBox = document.getElementById('error-container');
+        if (errBox) {
+          errBox.innerHTML = `
+            <div style="background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; padding: 24px; margin: 20px; font-family: monospace; color: #f87171;">
+              <h2 style="margin-top: 0; color: #ef4444;">⚠️ Simulation Transpilation / Runtime Error</h2>
+              <p><strong>Error:</strong> ${err.message}</p>
+              <pre style="background: #0f0f17; padding: 12px; border-radius: 4px; overflow-x: auto; color: #e2e8f0; margin-top: 12px;">${err.stack || err.toString()}</pre>
+            </div>
+          `;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+{
+  "simulation_id": "venturi_effect_bernoulli_principle",
+  "title": "Venturi Effect: Throat Velocity Increase and Pressure Drop",
+  "topic": "Fluid Dynamics & Bernoulli's Principle",
+  "pedagogical_goal": "Demonstrate how fluid velocity increases and pressure decreases in a constricted pipe section (Venturi throat) due to conservation of mass and energy, enabling flow rate measurement via pressure differential.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Continuity Equation: A\u2081v\u2081 = A\u2082v\u2082 (mass conservation for incompressible flow)",
+      "Bernoulli's Equation: P\u2081 + \u00bd\u03c1v\u2081\u00b2 + \u03c1gh\u2081 = P\u2082 + \u00bd\u03c1v\u2082\u00b2 + \u03c1gh\u2082 (energy conservation along a streamline, neglecting height change)",
+      "Pressure Drop: \u0394P = P\u2081 - P\u2082 = \u00bd\u03c1(v\u2082\u00b2 - v\u2081\u00b2)",
+      "Flow Rate: Q = A\u2081v\u2081 = A\u2082v\u2082"
+    ],
+    "variables": {
+      "inlet_diameter": {
+        "name": "Inlet Pipe Diameter",
+        "default": 0.1,
+        "unit": "m",
+        "min": 0.05,
+        "max": 0.2,
+        "step": 0.01
+      },
+      "throat_diameter": {
+        "name": "Throat Diameter",
+        "default": 0.05,
+        "unit": "m",
+        "min": 0.01,
+        "max": 0.09,
+        "step": 0.005
+      },
+      "inlet_velocity": {
+        "name": "Inlet Flow Velocity",
+        "default": 1.0,
+        "unit": "m/s",
+        "min": 0.1,
+        "max": 5.0,
+        "step": 0.1
+      },
+      "fluid_density": {
+        "name": "Fluid Density",
+        "default": 1000,
+        "unit": "kg/m\u00b3",
+        "min": 500,
+        "max": 2000,
+        "step": 50
+      },
+      "pipe_length": {
+        "name": "Pipe Visualization Length",
+        "default": 2.0,
+        "unit": "m",
+        "min": 1.0,
+        "max": 3.0,
+        "step": 0.1
+      }
+    },
+    "derived_formulas": {
+      "inlet_area": "Math.PI * Math.pow(inlet_diameter / 2, 2)",
+      "throat_area": "Math.PI * Math.pow(throat_diameter / 2, 2)",
+      "throat_velocity": "inlet_velocity * (inlet_area / throat_area)",
+      "pressure_drop": "0.5 * fluid_density * (Math.pow(throat_velocity, 2) - Math.pow(inlet_velocity, 2))",
+      "flow_rate": "inlet_area * inlet_velocity",
+      "throat_pressure": "101325 - pressure_drop"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "venturi_tube",
+        "type": "SVG_path",
+        "description": "A smooth Venturi tube geometry: converging section from inlet to throat, then diverging section back to outlet. Path defined as: M 50,240 Q 150,80 250,240 T 450,240 (symmetric inlet-throat-outlet). Stroke: #38bdf8, stroke-width: 4, fill: none."
+      },
+      {
+        "id": "flow_streamlines",
+        "type": "SVG_path",
+        "description": "Five evenly spaced streamlines flowing left to right. Each streamline is a cubic Bezier curve that compresses vertically in the throat region to visualize velocity increase. Start points: (50, y) for y in [120, 160, 200, 240, 280]; End points: (910, y). Control points adjust based on local tube height to show streamline convergence."
+      },
+      {
+        "id": "pressure_gradient_indicator",
+        "type": "SVG_rect",
+        "description": "A vertical pressure gradient bar on the left side (x=20) showing pressure distribution. Height mapped from inlet pressure (top) to throat pressure (bottom) using a linear gradient fill from #f43f5e (high pressure) to #38bdf8 (low pressure). Width: 20px. Height: 200px, positioned at y=140."
+      },
+      {
+        "id": "velocity_vectors",
+        "type": "SVG_line",
+        "description": "Three pairs of velocity vector arrows (inlet, throat, outlet) showing magnitude and direction. Each pair consists of a line and an arrowhead (polyline). Inlet: short vectors (low velocity), throat: long vectors (high velocity), outlet: medium vectors. Color: #34d399. Animated to pulse with flow."
+      },
+      {
+        "id": "manometer_tubes",
+        "type": "SVG_group",
+        "description": "Two vertical manometer tubes connected to inlet and throat pressure taps. Fluid columns (rectangles) rise to heights proportional to local pressure. Inlet column taller (high pressure), throat column shorter (low pressure). Fluid color: #f43f5e, tube outline: #e2e8f0."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "Animate dynamic elements using GSAP ticker or timeline with ease: 'none' for continuous motion",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_inlet_diameter",
+      "label": "Inlet Pipe Diameter",
+      "param": "inlet_diameter",
+      "type": "slider",
+      "min": 0.05,
+      "max": 0.2,
+      "step": 0.01,
+      "unit": "m"
+    },
+    {
+      "id": "slider_throat_diameter",
+      "label": "Throat Diameter",
+      "param": "throat_diameter",
+      "type": "slider",
+      "min": 0.01,
+      "max": 0.09,
+      "step": 0.005,
+      "unit": "m"
+    },
+    {
+      "id": "slider_inlet_velocity",
+      "label": "Inlet Flow Velocity",
+      "param": "inlet_velocity",
+      "type": "slider",
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.1,
+      "unit": "m/s"
+    },
+    {
+      "id": "slider_fluid_density",
+      "label": "Fluid Density",
+      "param": "fluid_density",
+      "type": "slider",
+      "min": 500,
+      "max": 2000,
+      "step": 50,
+      "unit": "kg/m\u00b3"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Inlet Velocity",
+      "formula": "inlet_velocity",
+      "unit": "m/s"
+    },
+    {
+      "label": "Throat Velocity",
+      "formula": "throat_velocity",
+      "unit": "m/s"
+    },
+    {
+      "label": "Pressure Drop (\u0394P)",
+      "formula": "pressure_drop",
+      "unit": "Pa"
+    },
+    {
+      "label": "Flow Rate (Q)",
+      "formula": "flow_rate",
+      "unit": "m\u00b3/s"
+    },
+    {
+      "label": "Throat Pressure",
+      "formula": "throat_pressure",
+      "unit": "Pa"
+    },
+    {
+      "label": "Velocity Ratio (v\u2082/v\u2081)",
+      "formula": "throat_velocity / inlet_velocity",
+      "unit": "ratio"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Continuity in Action",
+      "text": "As fluid enters the constricted throat, its cross-sectional area decreases. To maintain constant mass flow rate (A\u2081v\u2081 = A\u2082v\u2082), the fluid velocity must increase."
+    },
+    {
+      "step": 2,
+      "title": "Bernoulli's Energy Trade-off",
+      "text": "The increase in kinetic energy (\u00bd\u03c1v\u00b2) in the throat must be balanced by a decrease in pressure energy (P), assuming negligible height change. This causes the pressure drop observed in the manometer tubes."
+    },
+    {
+      "step": 3,
+      "title": "Venturi Meter Principle",
+      "text": "The pressure difference (\u0394P) between inlet and throat is proportional to the square of the flow rate. By measuring \u0394P, the flow rate can be calculated without moving parts, forming the basis of Venturi flow meters."
+    },
+    {
+      "step": 4,
+      "title": "Real-World Applications",
+      "text": "This principle is used in carburetors (fuel injection), aspirators, medical nebulizers, and industrial flow measurement. The geometry ensures efficient energy conversion with minimal losses compared to abrupt orifices."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "simulation_id": "crude_oil_fractional_distillation",
+  "title": "Crude Oil Fractional Distillation & Petroleum Derivatives",
+  "topic": "Petroleum Refining, Thermodynamics & Phase Equilibrium",
+  "pedagogical_goal": "Visually demonstrate how raw crude oil is thermally separated into specific hydrocarbon fractions (LPG, gasoline, naphtha, kerosene, diesel, fuel oil, bitumen) along a vertical 45-meter fractionating column using boiling point differentials and bubble tray condensation.",
+  "physics_model": {
+    "conservation_laws": [
+      "Raoult's Law & Vapor-Liquid Equilibrium: P_i = x_i * P_i_sat",
+      "Mass Conservation: Total Feed = Sum(Draw-off fractions) + Bottom residue",
+      "Clausius-Clapeyron Vapor Pressure: ln(P) = -Delta_H_vap / (R * T) + C"
+    ],
+    "variables": {
+      "furnaceTemp": {"name": "Furnace Inlet Temperature", "default": 380, "unit": "°C", "min": 280, "max": 450},
+      "feedRate": {"name": "Crude Feed Flow Rate", "default": 50000, "unit": "BPD", "min": 10000, "max": 100000},
+      "columnPressure": {"name": "Column Operating Pressure", "default": 1.2, "unit": "atm", "min": 0.8, "max": 2.5}
+    },
+    "fractions": [
+      {"name": "Refinery Gas / LPG", "tempRange": "< 40°C", "carbonChain": "C1 - C4"},
+      {"name": "Gasoline / Petrol", "tempRange": "40 - 110°C", "carbonChain": "C5 - C10"},
+      {"name": "Naphtha", "tempRange": "110 - 180°C", "carbonChain": "C6 - C11"},
+      {"name": "Kerosene / Jet Fuel", "tempRange": "180 - 260°C", "carbonChain": "C11 - C16"},
+      {"name": "Diesel / Gas Oil", "tempRange": "260 - 340°C", "carbonChain": "C16 - C20"},
+      {"name": "Heavy Fuel & Lube Oil", "tempRange": "340 - 450°C", "carbonChain": "C20 - C50"},
+      {"name": "Bitumen Asphalt", "tempRange": "> 450°C", "carbonChain": "C50+"}
+    ]
+  }
+}

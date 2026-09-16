@@ -1,0 +1,182 @@
+{
+  "simulation_id": "lithium_ion_battery_dynamics",
+  "title": "Lithium-Ion Battery: Intercalation & Rocking-Chair Electrochemistry",
+  "topic": "Electrochemistry & Energy Storage Physics",
+  "pedagogical_goal": "Visually demonstrate the microscopic and macroscopic working principles of a lithium-ion battery: how Li+ ions de-intercalate and migrate through the liquid electrolyte and porous separator between the graphite anode and cobalt oxide cathode, while electrons travel through the external circuit powering a load during discharge or being forced back by a power supply during charge.",
+  "physics_model": {
+    "redox_reactions": {
+      "anode_discharge": "LiC6 -> C6 + Li+ + e- (Oxidation / De-intercalation)",
+      "cathode_discharge": "CoO2 + Li+ + e- -> LiCoO2 (Reduction / Intercalation)",
+      "overall": "LiC6 + CoO2 <-> C6 + LiCoO2"
+    },
+    "variables": {
+      "soc": {"name": "State of Charge", "default": 80, "unit": "%", "min": 5, "max": 100},
+      "c_rate": {"name": "Charge / Discharge Rate", "default": 1.0, "unit": "C", "min": 0.2, "max": 3.5},
+      "capacity": {"name": "Cell Rated Capacity", "default": 3000, "unit": "mAh", "min": 1500, "max": 5000},
+      "internal_resistance": {"name": "Internal Cell Resistance", "default": 0.04, "unit": "Ohm", "min": 0.02, "max": 0.10},
+      "ambient_temp": {"name": "Ambient Temperature", "default": 25, "unit": "°C", "min": 0, "max": 50}
+    },
+    "derived_formulas": {
+      "nominal_current": "(c_rate * capacity) / 1000",
+      "open_circuit_voltage": "3.0 + 1.15 * Math.pow(soc / 100, 0.45) + 0.05 * (soc / 100)",
+      "voltage_drop": "nominal_current * internal_resistance",
+      "terminal_voltage_discharge": "Math.max(2.8, open_circuit_voltage - voltage_drop)",
+      "terminal_voltage_charge": "Math.min(4.25, open_circuit_voltage + voltage_drop)",
+      "cell_power": "nominal_current * terminal_voltage_discharge",
+      "joule_heating": "Math.pow(nominal_current, 2) * internal_resistance",
+      "anode_lithium_fraction": "soc / 100",
+      "cathode_lithium_fraction": "1.0 - (soc / 100)"
+    }
+  },
+  "visual_scene": {
+    "theme": "dark_modern_laboratory",
+    "background": "#0b0f19",
+    "accent_colors": {
+      "anode_graphite": "#334155",
+      "anode_copper": "#b45309",
+      "cathode_oxide": "#475569",
+      "cathode_aluminum": "#94a3b8",
+      "separator": "rgba(56, 189, 248, 0.25)",
+      "electrolyte": "rgba(30, 58, 138, 0.18)",
+      "lithium_ion": "#fbbf24",
+      "lithium_glow": "rgba(245, 158, 11, 0.6)",
+      "electron": "#38bdf8",
+      "electron_glow": "rgba(56, 189, 248, 0.7)",
+      "wire": "#64748b"
+    },
+    "components": [
+      {
+        "id": "battery_casing",
+        "type": "SVG_chassis",
+        "description": "Rounded cross-sectional battery cell showing three interior compartments: Negative Electrode (Anode, left x: 60-260), Porous Separator Zone (center x: 260-460), Positive Electrode (Cathode, right x: 460-660)."
+      },
+      {
+        "id": "anode_structure",
+        "type": "layered_graphite_sheets",
+        "description": "Horizontal stacked graphite layer planes where Li+ ions are intercalated between graphene sheets. Intercalation slots show glowing golden dots when occupied."
+      },
+      {
+        "id": "separator_membrane",
+        "type": "micro_porous_barrier",
+        "description": "Vertical translucent porous membrane at center (x: 350-370) with micro-pore channels allowing Li+ ions to pass while visibly rejecting electrons."
+      },
+      {
+        "id": "cathode_structure",
+        "type": "metal_oxide_crystal_grid",
+        "description": "Octahedral transition metal oxide crystal lattice layers (Cobalt Oxide) with interstitial sites accepting Li+ ions."
+      },
+      {
+        "id": "migrating_lithium_ions",
+        "type": "gsap_animated_ions",
+        "ion_count": 28,
+        "description": "Golden glowing spheres (Li+) migrating across the electrolyte and through separator pores. Direction flips dynamically based on mode (Anode->Cathode during discharge; Cathode->Anode during charge)."
+      },
+      {
+        "id": "external_circuit_and_electrons",
+        "type": "top_circuit_loop",
+        "description": "Top electrical wire connecting negative copper terminal to positive aluminum terminal through a central device. Glowing blue electrons (e-) travel along the wire in sync with ion flow."
+      },
+      {
+        "id": "circuit_load_or_source",
+        "type": "interactive_device_display",
+        "description": "Central circuit device that switches between a glowing lightbulb (in Discharge mode, whose illumination scales with C-rate) and a DC power plug/lightning icon (in Charge mode)."
+      },
+      {
+        "id": "battery_soc_gauge",
+        "type": "vertical_gradient_fuel_gauge",
+        "description": "Live battery state-of-charge percentage indicator with colored segment fill (Green > 60%, Amber 20-60%, Red < 20%)."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for container and SVG references",
+      "Manage all continuous ion and electron motion inside useEffect with gsap.context() and ctx.revert() cleanup",
+      "Drive continuous flow via gsap.ticker with timestep dt to update x/y coordinates of Li+ ions and circuit electrons",
+      "Smoothly tween battery fill gauges, voltage dials, and bulb brightness with gsap.to() on mode or slider changes",
+      "Reverse particle velocity vectors instantaneously when user toggles between 'Discharging' and 'Charging'"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "mode_selector",
+      "label": "Operating Mode",
+      "param": "mode",
+      "type": "mode_switch",
+      "options": [
+        {"id": "discharge", "label": "⚡ Discharging (Powering Load)"},
+        {"id": "charge", "label": "🔌 Charging (External Power)"},
+        {"id": "idle", "label": "⏸ Standby / Idle"}
+      ],
+      "default": "discharge"
+    },
+    {
+      "id": "c_rate_slider",
+      "label": "C-Rate (Discharge / Charge Speed)",
+      "param": "c_rate",
+      "type": "slider",
+      "min": 0.5,
+      "max": 3.0,
+      "step": 0.1,
+      "unit": "C"
+    },
+    {
+      "id": "soc_slider",
+      "label": "State of Charge (SoC)",
+      "param": "soc",
+      "type": "slider",
+      "min": 5,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    },
+    {
+      "id": "temp_slider",
+      "label": "Cell Temperature",
+      "param": "ambient_temp",
+      "type": "slider",
+      "min": 10,
+      "max": 50,
+      "step": 1,
+      "unit": "°C"
+    },
+    {
+      "id": "action_buttons",
+      "buttons": ["Play / Pause Cycle", "Reset Battery (100% SoC)", "Toggle Electron Trail", "Toggle Grid View"]
+    }
+  ],
+  "telemetry_metrics": [
+    {"label": "State of Charge (SoC)", "formula": "soc", "unit": "%"},
+    {"label": "Terminal Voltage", "formula": "V_term", "unit": "V"},
+    {"label": "Current Draw / Charge", "formula": "I", "unit": "A"},
+    {"label": "Electrical Power", "formula": "P", "unit": "W"},
+    {"label": "Cell Temperature", "formula": "T", "unit": "°C"},
+    {"label": "Anode Li+ Intercalation", "formula": "SoC%", "unit": "filled"}
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "1. The 'Rocking Chair' Principle",
+      "text": "Unlike lead-acid or alkaline batteries where electrodes permanently dissolve or plate, a Li-ion battery is a 'rocking chair' system: lithium ions simply shuffle back and forth between the graphite anode layers and the cobalt oxide cathode lattice without losing their metallic ionic identity."
+    },
+    {
+      "step": 2,
+      "title": "2. The Separator & Electrolyte Barrier",
+      "text": "The central porous membrane is an electronic insulator but an ionic conductor. It allows Li+ ions to diffuse through the liquid electrolyte, but strictly blocks electrons (e-), forcing them through the external wire to power your phone or motor!"
+    },
+    {
+      "step": 3,
+      "title": "3. Discharge vs. Charge Cycles",
+      "text": "During discharge, electrons flow spontaneously from negative to positive due to higher chemical potential at the anode. During charging, a higher external electrical voltage overcomes this gradient, forcibly pumping electrons and Li+ ions back into the graphite anode."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Dark glassmorphism UI (#0b0f19, glowing cyan and amber accents)",
+    "self_contained": true,
+    "component_export": "export default function LithiumIonBatteryDynamicsSimulation()",
+    "no_broken_dependencies": "Pure inline SVG icons (bulb, plug, battery, arrows) to guarantee standalone execution without external npm dependencies"
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "simulation_id": "quantum_tunneling_barrier",
+  "title": "Quantum Tunneling: Wavepacket Penetration Through a Potential Energy Barrier",
+  "topic": "Quantum Mechanics, Wave-Particle Duality & Schrödinger Equation",
+  "pedagogical_goal": "Visually demonstrate the phenomenon of quantum tunneling, where a subatomic particle has a non-zero probability of passing directly through a potential energy barrier higher than the particle's kinetic energy (E < V0), impossible in classical mechanics. Illustrate the exponential attenuation of the evanescent wave inside the barrier and the relationship between barrier thickness, energy deficit, and transmission coefficient.",
+  "physics_model": {
+    "fundamental_laws": [
+      "1D Time-Independent Schrödinger Equation: -(\\hbar^2 / 2m) * (d^2\\psi / dx^2) + V(x)\\psi = E\\psi",
+      "Wavevector in Region I & III (E > 0): k = \\sqrt{2mE} / \\hbar",
+      "Decay Constant in Barrier Region II (V0 > E): \\kappa = \\sqrt{2m(V0 - E)} / \\hbar",
+      "Transmission Coefficient (WKB approximation): T = exp(-2 * \\kappa * L)",
+      "Exact Transmission Probability: T = 1 / (1 + (V0^2 * sinh^2(\\kappa * L)) / (4 * E * (V0 - E)))",
+      "Reflection Probability: R = 1 - T",
+      "Penetration Depth (Characteristic Length): \\delta = 1 / \\kappa"
+    ],
+    "variables": {
+      "particle_energy": {
+        "name": "Particle Energy (E)",
+        "default": 4.5,
+        "unit": "eV",
+        "min": 1.0,
+        "max": 10.0,
+        "step": 0.1
+      },
+      "barrier_height": {
+        "name": "Barrier Potential (V0)",
+        "default": 6.5,
+        "unit": "eV",
+        "min": 3.0,
+        "max": 12.0,
+        "step": 0.1
+      },
+      "barrier_width": {
+        "name": "Barrier Thickness (L)",
+        "default": 1.2,
+        "unit": "nm",
+        "min": 0.4,
+        "max": 3.0,
+        "step": 0.1
+      },
+      "particle_type": {
+        "name": "Particle Mass Category",
+        "default": "electron",
+        "options": [
+          {"label": "Electron (m_e = 0.511 MeV/c²)", "value": "electron", "mass_ratio": 1.0},
+          {"label": "Muon (m = 207 m_e)", "value": "muon", "mass_ratio": 207.0},
+          {"label": "Proton (m_p = 1836 m_e)", "value": "proton", "mass_ratio": 1836.0}
+        ]
+      },
+      "display_mode": {
+        "name": "Visualization Display Mode",
+        "default": "wave_and_particles",
+        "options": [
+          {"label": "Wavefunction ψ(x) + Packets", "value": "wave_and_particles"},
+          {"label": "Probability Density |ψ(x)|²", "value": "probability_density"},
+          {"label": "Real vs Imaginary Components", "value": "complex_components"}
+        ]
+      }
+    },
+    "derived_formulas": {
+      "energy_deficit": "max(0, barrier_height - particle_energy)",
+      "is_classically_forbidden": "particle_energy < barrier_height",
+      "effective_mass_factor": "particle_type === 'proton' ? 42.8 : (particle_type === 'muon' ? 14.4 : 1.0)",
+      "kappa": "5.12 * Math.sqrt(Math.max(0.01, barrier_height - particle_energy)) * (particle_type === 'proton' ? 6.5 : (particle_type === 'muon' ? 3.2 : 1.0))",
+      "penetration_depth": "1.0 / Math.max(0.1, 5.12 * Math.sqrt(Math.max(0.01, barrier_height - particle_energy)))",
+      "transmission_probability": "particle_energy >= barrier_height ? 1.0 : (1.0 / (1.0 + (Math.pow(barrier_height, 2) * Math.pow(Math.sinh(Math.min(15, 5.12 * Math.sqrt(Math.max(0.01, barrier_height - particle_energy)) * barrier_width * (particle_type === 'proton' ? 4.0 : (particle_type === 'muon' ? 2.0 : 1.0)))), 2)) / (4.0 * particle_energy * Math.max(0.05, barrier_height - particle_energy)))))",
+      "reflection_probability": "1.0 - transmission_probability",
+      "transmitted_amplitude": "Math.sqrt(transmission_probability)",
+      "wavelength_region1": "1.226 / Math.sqrt(particle_energy)",
+      "tunneling_regime_label": "particle_energy >= barrier_height ? 'Above-Barrier Transmission (Classical Pass)' : (transmission_probability < 0.01 ? 'Deep Evanescent Attenuation (R ≈ 100%)' : 'Measurable Quantum Tunneling (T > 1%)')"
+    }
+  },
+  "visual_scene": {
+    "theme": "dark_modern_quantum_lab",
+    "background": "#0b0f19",
+    "viewBox": "0 0 920 420",
+    "accent_colors": {
+      "incident_wave": "#38bdf8",
+      "reflected_wave": "#f43f5e",
+      "transmitted_wave": "#34d399",
+      "evanescent_wave": "#f59e0b",
+      "barrier_fill": "rgba(99, 102, 241, 0.2)",
+      "barrier_glow": "rgba(99, 102, 241, 0.45)",
+      "energy_level_line": "#e2e8f0",
+      "classical_wall": "#64748b",
+      "probability_fill": "rgba(56, 189, 248, 0.25)"
+    },
+    "components": [
+      {
+        "id": "potential_energy_landscape",
+        "type": "SVG_barrier_profile",
+        "description": "Cross-sectional potential energy profile V(x). Region I (x: 60-380) has V=0. Region II (x: 380 to 380+width*80) represents the glowing potential barrier of height V0 with semi-transparent violet-indigo gradient fill. Region III (after barrier) returns to V=0.",
+        "geometry": {
+          "baseline_y": 280,
+          "scale_y": 20,
+          "barrier_start_x": 380
+        }
+      },
+      {
+        "id": "energy_line_overlay",
+        "type": "horizontal_energy_level",
+        "description": "Cyan horizontal dashed line representing total particle energy E. Visually intersects the barrier height V0 to make the energy deficit (V0 - E) immediately apparent."
+      },
+      {
+        "id": "quantum_wavefunction_curve",
+        "type": "declarative_SVG_path",
+        "description": "Continuous real-time Schrödinger wave function psi(x). Region I exhibits superposition of incident and reflected waves forming an interference standing wave pattern. Region II decays exponentially as exp(-kappa * x). Region III continues as a smooth sinusoidal oscillation with attenuated amplitude sqrt(T)."
+      },
+      {
+        "id": "probability_density_area",
+        "type": "SVG_shaded_area",
+        "description": "Shaded probability density curve |psi(x)|^2 showing the probability distribution of finding the particle at any spatial coordinate x, clearly demonstrating the finite non-zero probability to the right of the barrier."
+      },
+      {
+        "id": "wave_packet_particle_stream",
+        "type": "gsap_animated_particles",
+        "description": "Continuous stream of Gaussian quantum wavepackets/particles drifting from left to right. When hitting the barrier at x: 380, particles probabilistically bifurcate: the vast majority reflect backward with red trails, while a percentage matching T emerges on the right with green luminescence."
+      },
+      {
+        "id": "classical_comparison_indicator",
+        "type": "side_by_side_callout",
+        "description": "Comparison HUD displaying Newtonian Classical Mechanics (T = 0% strictly blocked by barrier) vs. Quantum Mechanics (T > 0% probabilistic wave penetration)."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for container and SVG references",
+      "Use gsap.context() inside useEffect with return ctx.revert() cleanup",
+      "Animate the wave phase offset using gsap.ticker with dt timestep to produce continuous flowing phase propagation",
+      "Animate probabilistic particle splitting at the barrier: particle opacity/position smoothly transitioning across the tunnel region",
+      "Smoothly tween SVG barrier height and width adjustments using gsap.to() with ease: 'power2.out' when sliders are dragged"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "particle_energy",
+      "label": "Particle Energy (E)",
+      "param": "particle_energy",
+      "type": "slider",
+      "unit": "eV",
+      "min": 1.0,
+      "max": 10.0,
+      "step": 0.1,
+      "description": "Adjust the total kinetic energy of the approaching quantum wavepacket."
+    },
+    {
+      "id": "barrier_height",
+      "label": "Barrier Potential (V₀)",
+      "param": "barrier_height",
+      "type": "slider",
+      "unit": "eV",
+      "min": 3.0,
+      "max": 12.0,
+      "step": 0.1,
+      "description": "Adjust the electrostatic potential height of the barrier."
+    },
+    {
+      "id": "barrier_width",
+      "label": "Barrier Width (L)",
+      "param": "barrier_width",
+      "type": "slider",
+      "unit": "nm",
+      "min": 0.4,
+      "max": 2.5,
+      "step": 0.1,
+      "description": "Adjust the physical barrier thickness. Notice the exponential sensitivity of tunneling probability to thickness."
+    },
+    {
+      "id": "particle_type",
+      "label": "Particle Mass Category",
+      "param": "particle_type",
+      "type": "button_group",
+      "options": ["electron", "muon", "proton"],
+      "description": "Select between Electron, Muon, and Proton to observe why heavy particles (protons) practically never tunnel in macroscopic systems."
+    },
+    {
+      "id": "display_mode",
+      "label": "Display Mode",
+      "param": "display_mode",
+      "type": "button_group",
+      "options": ["wave_and_particles", "probability_density", "complex_components"],
+      "description": "Toggle between the wave function amplitude ψ(x), probability density |ψ(x)|², and particle packets."
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "transmission_coeff",
+      "label": "Tunneling Transmission (T)",
+      "formula": "(transmission_probability * 100).toFixed(2)",
+      "unit": "%",
+      "description": "Percentage probability that a particle traverses the classically forbidden potential barrier."
+    },
+    {
+      "id": "reflection_coeff",
+      "label": "Reflection Probability (R)",
+      "formula": "(reflection_probability * 100).toFixed(2)",
+      "unit": "%",
+      "description": "Percentage probability that the incident quantum wave is reflected back into Region I."
+    },
+    {
+      "id": "decay_constant",
+      "label": "Evanescent Decay Constant (κ)",
+      "formula": "kappa.toFixed(2)",
+      "unit": "nm⁻¹",
+      "description": "Exponential attenuation rate inside the barrier: ψ(x) ∝ exp(-κx)."
+    },
+    {
+      "id": "penetration_depth",
+      "label": "Penetration Depth (δ = 1/κ)",
+      "formula": "penetration_depth.toFixed(3)",
+      "unit": "nm",
+      "description": "Characteristic distance over which the wavefunction drops to 1/e (36.8%) of its initial value."
+    },
+    {
+      "id": "energy_deficit",
+      "label": "Energy Barrier Deficit (V₀ - E)",
+      "formula": "energy_deficit.toFixed(2)",
+      "unit": "eV",
+      "description": "Height of the barrier above the particle energy. In classical physics, any positive value strictly blocks passage."
+    }
+  ],
+  "educational_cards": [
+    {
+      "title": "Why Does Quantum Tunneling Occur?",
+      "content": "Unlike classical particles which bounce like billiard balls when particle energy E is less than V₀ (E &lt; V₀), quantum particles possess wave-particle duality described by Schrödinger's wave equation. Because the wave function and its derivative must be continuous everywhere, the wave does not abruptly drop to zero at the barrier face; instead, it decays exponentially inside. If the barrier is thin enough, a non-zero tail emerges on the other side, giving the particle a real probability of appearing on the opposite side."
+    },
+    {
+      "title": "Exponential Thickness Sensitivity (The STM Principle)",
+      "content": "Notice how increasing barrier thickness L from 0.8 nm to 1.6 nm causes tunneling probability T to collapse by orders of magnitude. This exponential sensitivity is the operating principle of the Scanning Tunneling Microscope (STM): changing the tip-to-surface distance by just 0.1 nm changes current by a factor of 10, enabling atomic-scale resolution."
+    },
+    {
+      "title": "Why Don't Everyday Objects Tunnel?",
+      "content": "Switch the mass selector from Electron to Proton. Notice how transmission plunges to virtually zero. Because the decay constant κ scales with the square root of particle mass (\\sqrt{m}), macroscopic objects like baseballs or humans (with masses > 10^27 times an electron) have tunneling probabilities so microscopic that one would have to wait longer than the age of the universe to observe an event."
+    }
+  ]
+}

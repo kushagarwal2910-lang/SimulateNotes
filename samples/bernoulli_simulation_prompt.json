@@ -1,0 +1,172 @@
+{
+  "simulation_id": "bernoulli_principle_venturi_flow",
+  "title": "Bernoulli's Principle: Venturi Fluid Dynamics & Energy Conservation",
+  "topic": "Fluid Dynamics & Conservation of Energy",
+  "pedagogical_goal": "Visually demonstrate that when an incompressible fluid flows through a constricted section of pipe, its velocity increases according to the continuity equation, while its internal static pressure simultaneously decreases according to Bernoulli's principle.",
+  "physics_model": {
+    "conservation_laws": [
+      "Continuity Equation: A1 * v1 = A2 * v2 = Q (Volumetric Flow Rate)",
+      "Bernoulli Equation: P1 + 0.5 * rho * v1^2 = P2 + 0.5 * rho * v2^2 = Constant (assuming horizontal flow h1=h2)"
+    ],
+    "variables": {
+      "d1": {"name": "Inlet Pipe Diameter", "default": 0.10, "unit": "m", "min": 0.08, "max": 0.15},
+      "d2_ratio": {"name": "Throat Constriction Ratio (d2 / d1)", "default": 0.50, "unit": "ratio", "min": 0.30, "max": 0.85},
+      "v1": {"name": "Inlet Velocity", "default": 2.5, "unit": "m/s", "min": 1.0, "max": 8.0},
+      "p1": {"name": "Inlet Static Pressure", "default": 150000, "unit": "Pa", "min": 100000, "max": 250000},
+      "rho": {"name": "Fluid Density", "default": 1000, "unit": "kg/m^3", "options": [
+        {"label": "Water (1000 kg/m³)", "value": 1000},
+        {"label": "Light Oil (850 kg/m³)", "value": 850},
+        {"label": "Air (1.2 kg/m³)", "value": 1.2}
+      ]},
+      "g": {"name": "Gravitational Acceleration", "value": 9.81, "unit": "m/s^2"}
+    },
+    "derived_formulas": {
+      "A1": "pi * (d1 / 2)^2",
+      "d2": "d1 * d2_ratio",
+      "A2": "pi * (d2 / 2)^2",
+      "v2": "v1 * (A1 / A2)",
+      "dynamic_pressure_1": "0.5 * rho * v1^2",
+      "dynamic_pressure_2": "0.5 * rho * v2^2",
+      "p2": "max(1000, p1 + dynamic_pressure_1 - dynamic_pressure_2)",
+      "delta_p": "p1 - p2",
+      "manometer_h1": "p1 / (rho * g * 100)",
+      "manometer_h2": "p2 / (rho * g * 100)"
+    }
+  },
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "accent_colors": {
+      "pipe_border": "#3b82f6",
+      "pipe_fill": "rgba(30, 58, 138, 0.15)",
+      "fluid_glow": "rgba(59, 130, 246, 0.4)",
+      "constriction_glow": "rgba(245, 158, 11, 0.35)",
+      "particle_slow": "#60a5fa",
+      "particle_fast": "#f59e0b",
+      "pressure_high": "#ef4444",
+      "pressure_low": "#06b6d4"
+    },
+    "components": [
+      {
+        "id": "venturi_pipe",
+        "type": "SVG_path",
+        "description": "Horizontal Venturi tube with 3 zones: Section 1 (wide inlet, x: 50-250), Converging Transition (x: 250-380), Section 2 Throat (narrow constriction, x: 380-520), Diverging Transition (x: 520-650), Section 3 Outlet (wide recovery, x: 650-850)."
+      },
+      {
+        "id": "manometer_tubes",
+        "type": "vertical_liquid_columns",
+        "positions": [
+          {"id": "column_1", "x": 160, "label": "P1 (Inlet)", "color": "#ef4444"},
+          {"id": "column_2", "x": 450, "label": "P2 (Throat)", "color": "#06b6d4"},
+          {"id": "column_3", "x": 740, "label": "P3 (Outlet)", "color": "#10b981"}
+        ],
+        "description": "Transparent vertical tubes connected to the top of the pipe showing liquid height h = P / (rho * g). Column 2 drops dramatically compared to Column 1, demonstrating Bernoulli drop."
+      },
+      {
+        "id": "streamlines_and_particles",
+        "type": "gsap_animated_flow",
+        "streamline_count": 5,
+        "particle_count_per_line": 16,
+        "description": "Particles flow continuously from left to right along streamline curves. In Section 1, particles move at speed v1. As they enter the throat, they accelerate to v2 and stretch/bunch closer vertically. In Section 3, they decelerate back to v1."
+      },
+      {
+        "id": "velocity_vector_indicators",
+        "type": "dynamic_arrows",
+        "locations": ["x: 160", "x: 450", "x: 740"],
+        "description": "Interactive arrow overlays showing instantaneous velocity vectors. Arrow in Section 2 is visibly much longer than in Section 1 and Section 3."
+      },
+      {
+        "id": "energy_conservation_bars",
+        "type": "live_stacked_chart",
+        "description": "Real-time energy bars at Section 1 vs Section 2 showing: [Static Pressure Energy P] + [Kinetic Energy 0.5*rho*v^2] = [Total Mechanical Energy]. Shows that total height is constant, but in Section 2 kinetic energy expands while static pressure shrinks."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for DOM/SVG references",
+      "Use gsap.context() inside useEffect for proper cleanup on re-renders",
+      "Animate particles using GSAP timelines or ticker loops with ease: 'none' for smooth continuous fluid flow",
+      "Smoothly tween manometer liquid levels (height and y) using gsap.to() with duration: 0.6, ease: 'power2.out' when parameters change",
+      "Tween velocity arrow lengths and energy bar widths/heights smoothly on parameter adjustment"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "v1_slider",
+      "label": "Inlet Velocity (v1)",
+      "param": "v1",
+      "type": "slider",
+      "min": 1.0,
+      "max": 8.0,
+      "step": 0.2,
+      "unit": "m/s"
+    },
+    {
+      "id": "d2_ratio_slider",
+      "label": "Throat Constriction Ratio (d2 / d1)",
+      "param": "d2_ratio",
+      "type": "slider",
+      "min": 0.35,
+      "max": 0.85,
+      "step": 0.05,
+      "unit": ""
+    },
+    {
+      "id": "p1_slider",
+      "label": "Inlet Pressure (P1)",
+      "param": "p1",
+      "type": "slider",
+      "min": 100,
+      "max": 220,
+      "step": 5,
+      "multiplier": 1000,
+      "unit": "kPa"
+    },
+    {
+      "id": "fluid_selector",
+      "label": "Working Fluid",
+      "param": "rho",
+      "type": "select",
+      "options": ["Water (1000 kg/m³)", "Oil (850 kg/m³)", "Air (1.2 kg/m³)"]
+    },
+    {
+      "id": "playback_controls",
+      "buttons": ["Play / Pause", "Reset to Defaults", "Toggle Velocity Vectors", "Toggle Energy Bars"]
+    }
+  ],
+  "telemetry_metrics": [
+    {"label": "Inlet Speed (v1)", "formula": "v1", "unit": "m/s"},
+    {"label": "Throat Speed (v2)", "formula": "v1 * (A1 / A2)", "unit": "m/s"},
+    {"label": "Speed Multiplier", "formula": "v2 / v1", "unit": "x faster"},
+    {"label": "Inlet Pressure (P1)", "formula": "P1", "unit": "kPa"},
+    {"label": "Throat Pressure (P2)", "formula": "P2", "unit": "kPa"},
+    {"label": "Pressure Drop (ΔP)", "formula": "P1 - P2", "unit": "kPa"}
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "1. The Narrower Path",
+      "text": "Because fluid cannot be created or destroyed, the volume flowing in must equal the volume flowing out (A1·v1 = A2·v2). When the pipe narrows at the throat, fluid must speed up!"
+    },
+    {
+      "step": 2,
+      "title": "2. Energy Conservation",
+      "text": "As fluid accelerates into the throat, its Kinetic Energy (½ρv²) surges. By the Law of Conservation of Energy, that energy must come from somewhere—it is borrowed from the internal Static Pressure (P)!"
+    },
+    {
+      "step": 3,
+      "title": "3. The Manometer Reading",
+      "text": "Look at the vertical glass tubes: The liquid column above the constricted throat drops lower than the inlet! This physical drop proves the pressure in the fast-moving fluid has plummeted."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function BernoulliSimulation()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

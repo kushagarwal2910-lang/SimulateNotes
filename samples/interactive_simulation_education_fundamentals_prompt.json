@@ -1,0 +1,232 @@
+{
+  "simulation_id": "interactive_simulation_education_fundamentals",
+  "title": "Interactive Simulation Pedagogy Explorer",
+  "topic": "STEM Education & Learning Science",
+  "pedagogical_goal": "Explore how interactive simulations transform STEM learning by shifting from passive reception to active meaning-making through inquiry-based exploration, variable manipulation, and immediate feedback, thereby building confidence and competence across diverse learners.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Learning gain = f(exploration_depth, feedback_quality, iteration_frequency) where exploration_depth increases with variable manipulation freedom",
+      "Confidence building = g(safe_failure_opportunities, incremental_success_signals) where safe failures reduce stigma and encourage persistence",
+      "Knowledge transfer = h(structured_inquiry_cycles, cross_domain_patterns) where repeated inquiry patterns build generalizable reasoning skills"
+    ],
+    "variables": {
+      "exploration_freedom": {
+        "name": "Exploration Freedom",
+        "default": 0.7,
+        "unit": "index (0-1)",
+        "min": 0.1,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "feedback_immediacy": {
+        "name": "Feedback Immediacy",
+        "default": 0.8,
+        "unit": "index (0-1)",
+        "min": 0.2,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "safe_iteration_allowed": {
+        "name": "Safe Iteration Allowed",
+        "default": 1,
+        "unit": "boolean",
+        "min": 0,
+        "max": 1,
+        "step": 1
+      },
+      "inquiry_structure_level": {
+        "name": "Inquiry Structure Level",
+        "default": 0.6,
+        "unit": "index (0-1)",
+        "min": 0.0,
+        "max": 1.0,
+        "step": 0.1
+      },
+      "learner_prior_confidence": {
+        "name": "Learner Prior Confidence",
+        "default": 0.4,
+        "unit": "index (0-1)",
+        "min": 0.1,
+        "max": 0.9,
+        "step": 0.05
+      }
+    },
+    "derived_formulas": {
+      "learning_gain_potential": "Math.min(1.0, (exploration_freedom * 0.4) + (feedback_immediacy * 0.3) + (safe_iteration_allowed * 0.2) + (inquiry_structure_level * 0.1))",
+      "confidence_building_rate": "Math.max(0.0, (safe_iteration_allowed * 0.5) + (learner_prior_confidence * 0.3) + (feedback_immediacy * 0.2))",
+      "knowledge_transfer_score": "Math.pow(inquiry_structure_level, 1.2) * Math.sqrt(exploration_freedom)",
+      "engagement_momentum": "(exploration_freedom * feedback_immediacy) / (1 + Math.exp(-5 * (inquiry_structure_level - 0.5)))",
+      "inclusion_impact": "1 - Math.abs(learner_prior_confidence - 0.5) * 0.6 + (safe_iteration_allowed * 0.4)"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "learning_gain_meter",
+        "type": "SVG_path",
+        "description": "A dynamic vertical bar graph representing learning gain potential, filled from bottom up based on the learning_gain_potential formula. Coordinates: x=100, y=400, width=60, height=- (learning_gain_potential * 300). Filled with gradient from #38bdf8 to #34d399, stroke #ffffff, stroke-width=2."
+      },
+      {
+        "id": "confidence_flow",
+        "type": "SVG_path",
+        "description": "A flowing sine wave pattern representing confidence building rate over time, animated horizontally. Path defined as: starting at x=200, y=240, with points generated as [200 + i*2, 240 + Math.sin(i*0.2 + time_offset) * (confidence_building_rate * 80)] for i from 0 to 300. Stroke #f43f5e, stroke-width=3, fill='none', with animated dash-offset for motion effect."
+      },
+      {
+        "id": "inquiry_cycle_visualizer",
+        "type": "SVG_path",
+        "description": "A circular diagram with four quadrants representing the inquiry cycle: Explore, Test, Reflect, Apply. Each quadrant is a curved path segment (using SVG arc commands) forming a complete circle at cx=480, cy=240, rx=120, ry=120. Quadrants change fill opacity based on inquiry_structure_level (0.2 to 0.9). Center contains pulsing dot (cx=480, cy=240, r=8) animated with scale transform."
+      },
+      {
+        "id": "inclusion_impact_field",
+        "type": "SVG_path",
+        "description": "A field of organic, interconnected nodes representing diverse learners, positioned using a force-directed layout approximation. 20 nodes placed in ellipse distribution (cx=700, cy=240, rx=180, ry=100) with slight random offset. Each node is a circle (r=12) filled with #34d399, opacity scaled by inclusion_impact. Connections between nearby nodes (distance < 80) are curved quadratic Bezier paths with stroke #38bdf8 and opacity 0.3 * inclusion_impact."
+      },
+      {
+        "id": "momentum_particles",
+        "type": "SVG_path",
+        "description": "A particle system emitting from the inquiry cycle visualizer, representing engagement momentum. 50 particles with initial position at (480, 240), velocity vectors randomized but biased outward. Each particle is a small circle (r=3-6) with fade-out trail. Particle life and speed scaled by engagement_momentum (0.5 to 2.0). Color shifts from #38bdf8 to #f43f5e based on particle age/life ratio."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "Animate dynamic elements using GSAP ticker or timeline with ease: 'none' for continuous motion",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "exploration_freedom_slider",
+      "label": "Exploration Freedom",
+      "param": "exploration_freedom",
+      "type": "slider",
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05,
+      "unit": "index"
+    },
+    {
+      "id": "feedback_immediacy_slider",
+      "label": "Feedback Immediacy",
+      "param": "feedback_immediacy",
+      "type": "slider",
+      "min": 0.2,
+      "max": 1.0,
+      "step": 0.05,
+      "unit": "index"
+    },
+    {
+      "id": "safe_iteration_toggle",
+      "label": "Allow Safe Iteration",
+      "param": "safe_iteration_allowed",
+      "type": "toggle",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "unit": "boolean"
+    },
+    {
+      "id": "inquiry_structure_slider",
+      "label": "Inquiry Structure Level",
+      "param": "inquiry_structure_level",
+      "type": "slider",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.1,
+      "unit": "index"
+    },
+    {
+      "id": "prior_confidence_slider",
+      "label": "Learner Prior Confidence",
+      "param": "learner_prior_confidence",
+      "type": "slider",
+      "min": 0.1,
+      "max": 0.9,
+      "step": 0.05,
+      "unit": "index"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Learning Gain Potential",
+      "formula": "learning_gain_potential",
+      "unit": "index"
+    },
+    {
+      "label": "Confidence Building Rate",
+      "formula": "confidence_building_rate",
+      "unit": "index/s"
+    },
+    {
+      "label": "Knowledge Transfer Score",
+      "formula": "knowledge_transfer_score",
+      "unit": "index"
+    },
+    {
+      "label": "Engagement Momentum",
+      "formula": "engagement_momentum",
+      "unit": "arb. units"
+    },
+    {
+      "label": "Inclusion Impact",
+      "formula": "inclusion_impact",
+      "unit": "index"
+    },
+    {
+      "label": "Current Exploration Freedom",
+      "formula": "exploration_freedom",
+      "unit": "index"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "The Shift from Passive to Active Learning",
+      "text": "Interactive simulations reverse traditional instruction by letting learners explore systems first, manipulate variables, and observe outcomes before formal terminology is introduced. This builds meaning through direct experience rather than passive reception."
+    },
+    {
+      "step": 2,
+      "title": "Safe Failure Builds Persistent Confidence",
+      "text": "By allowing incorrect assumptions to be explored without penalty, simulations reduce the stigma of failure. Learners from historically underrepresented groups in STEM are more likely to persist when they can test ideas repeatedly in a psychologically safe environment."
+    },
+    {
+      "step": 3,
+      "title": "Structured Inquiry Transfers Thinking Skills",
+      "text": "When simulations embed structured inquiry cycles (explore-test-reflect-apply), learners develop transferable reasoning patterns. Repeated exposure to this cycle across subjects builds generalizable problem-solving abilities rather than isolated procedural knowledge."
+    },
+    {
+      "step": 4,
+      "title": "Inclusive Design Expands STEM Participation",
+      "text": "Well-designed simulations offer multiple entry points (visual, kinesthetic, repetitive) that accommodate diverse learning styles and prior experiences. This helps dismantle the myth that STEM competence requires immediate correctness or abstract confidence."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

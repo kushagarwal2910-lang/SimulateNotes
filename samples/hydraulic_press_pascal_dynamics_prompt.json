@@ -1,0 +1,344 @@
+{
+  "simulation_id": "hydraulic_press_pascal_dynamics",
+  "title": "Hydraulic Press Pascal Dynamics \u2014 Force Multiplication & Fluid Power",
+  "topic": "Fluid Mechanics & Mechanical Engineering \u2014 Pascal's Principle in Hydraulic Systems",
+  "pedagogical_goal": "Master Pascal's Law (P\u2081=P\u2082) by interactively exploring how a small input force on a small piston generates a massive output force on a large piston through an incompressible fluid, while conserving energy via displacement trade-off (F\u2081d\u2081=F\u2082d\u2082). Visualize real-time pressure fields, fluid particle kinetics, and the nonlinear force-displacement relationship governing industrial press brakes, car brakes, and aerospace actuators.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Pascal's Principle: \u0394P = F\u2081/A\u2081 = F\u2082/A\u2082 \u2014 pressure applied to confined fluid transmits undiminished",
+      "Force Multiplication: F\u2082 = F\u2081 \u00d7 (A\u2082/A\u2081) = F\u2081 \u00d7 (d\u2082\u00b2/d\u2081\u00b2) \u2014 output force scales with area ratio",
+      "Volume Conservation (Incompressible Flow): A\u2081\u00b7v\u2081 = A\u2082\u00b7v\u2082 = Q \u2014 volumetric flow rate constant",
+      "Displacement Trade-off: x\u2082 = x\u2081 \u00d7 (A\u2081/A\u2082) \u2014 large force moves small distance",
+      "Work Conservation (Ideal): W_in = F\u2081\u00b7x\u2081 = F\u2082\u00b7x\u2082 = W_out \u2014 energy conserved, power P = F\u00b7v",
+      "Hydraulic Power: P_hyd = \u0394P \u00d7 Q = (F\u2081/A\u2081) \u00d7 (A\u2081\u00b7v\u2081) = F\u2081\u00b7v\u2081 = F\u2082\u00b7v\u2082",
+      "Dynamic Pressure (Bernoulli + Losses): P_dynamic = \u00bd\u03c1v\u00b2 + \u03bc\u00b7(dv/dy) \u2014 minor for quasi-static press"
+    ],
+    "variables": {
+      "d1_mm": {
+        "name": "Input Piston Diameter",
+        "default": 25,
+        "unit": "mm",
+        "min": 10,
+        "max": 100,
+        "step": 1
+      },
+      "d2_mm": {
+        "name": "Output Piston Diameter",
+        "default": 200,
+        "unit": "mm",
+        "min": 50,
+        "max": 500,
+        "step": 5
+      },
+      "F1_N": {
+        "name": "Applied Input Force",
+        "default": 500,
+        "unit": "N",
+        "min": 50,
+        "max": 5000,
+        "step": 50
+      },
+      "rho_kg_m3": {
+        "name": "Hydraulic Fluid Density",
+        "default": 870,
+        "unit": "kg/m\u00b3",
+        "min": 800,
+        "max": 1200,
+        "step": 10
+      },
+      "mu_Pa_s": {
+        "name": "Dynamic Viscosity",
+        "default": 0.046,
+        "unit": "Pa\u00b7s",
+        "min": 0.01,
+        "max": 0.2,
+        "step": 0.005
+      },
+      "Q_L_min": {
+        "name": "Pump Flow Rate",
+        "default": 10,
+        "unit": "L/min",
+        "min": 1,
+        "max": 100,
+        "step": 1
+      },
+      "stroke_mm": {
+        "name": "Output Piston Stroke",
+        "default": 150,
+        "unit": "mm",
+        "min": 20,
+        "max": 500,
+        "step": 10
+      },
+      "efficiency": {
+        "name": "System Efficiency",
+        "default": 0.92,
+        "unit": "",
+        "min": 0.7,
+        "max": 1.0,
+        "step": 0.01
+      },
+      "sim_time_s": {
+        "name": "Simulation Time",
+        "default": 0,
+        "unit": "s",
+        "min": 0,
+        "max": 60,
+        "step": 0.1
+      }
+    },
+    "derived_formulas": {
+      "A1_m2": "Math.PI * Math.pow(d1_mm * 1e-3 / 2, 2)",
+      "A2_m2": "Math.PI * Math.pow(d2_mm * 1e-3 / 2, 2)",
+      "area_ratio": "A2_m2 / A1_m2",
+      "P_Pa": "F1_N / A1_m2",
+      "F2_ideal_N": "F1_N * area_ratio",
+      "F2_actual_N": "F2_ideal_N * efficiency",
+      "Q_m3_s": "Q_L_min * 1e-3 / 60",
+      "v1_m_s": "Q_m3_s / A1_m2",
+      "v2_m_s": "Q_m3_s / A2_m2",
+      "x1_m": "sim_time_s * v1_m_s",
+      "x2_m": "sim_time_s * v2_m_s",
+      "x1_mm": "x1_m * 1000",
+      "x2_mm": "x2_m * 1000",
+      "work_in_J": "F1_N * x1_m",
+      "work_out_J": "F2_actual_N * x2_m",
+      "power_W": "F1_N * v1_m_s",
+      "reynolds": "rho_kg_m3 * v2_m_s * (d2_mm * 1e-3) / mu_Pa_s",
+      "pressure_bar": "P_Pa / 1e5",
+      "force_multiplication": "F2_actual_N / F1_N",
+      "stroke_complete": "x2_mm >= stroke_mm ? 1 : 0"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0a0e17",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.4)",
+      "fluid_base": "#1e3a5f",
+      "fluid_high": "#0ea5e9",
+      "frame_steel": "#374151",
+      "frame_highlight": "#6b7280",
+      "piston_chrome": "#d1d5db",
+      "gauge_bg": "#0f172a",
+      "text_primary": "#f1f5f9",
+      "text_muted": "#94a3b8"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Industrial test cell with 50mm isometric grid, floor mounting bolts, overhead crane rail, and graduated pressure scale rulers on left/right margins"
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive C-frame hydraulic press (H-frame variant) occupying 72% viewport \u2014 420\u00d7380mm central silhouette with 45mm thick columns, 60mm crown, 50mm bed, 4\u00d7M24 anchor bolts, T-slotted work table, and removable die set. Closed Bezier path: M60,80 C60,40 120,20 180,20 L780,20 C840,20 900,40 900,80 L900,400 C900,440 840,460 780,460 L180,460 C120,460 60,440 60,400 Z with internal cutouts for cylinders"
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Dual hydraulic cylinders with dynamic fluid columns \u2014 input cylinder (\u00d8d1) at left pump station, output cylinder (\u00d8d2) at press ram. Each cylinder filled with radialGradient (id=fluidGrad1, fluidGrad2) transitioning from fluid_base (0% pressure) to fluid_high (100% pressure) with animated Gaussian turbulence filter (feTurbulence baseFrequency=0.02 numOctaves=3) and feDisplacementMap scale=3 driven by P_Pa. Connecting manifold shows pressure wave propagation via animated dasharray offset"
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 32 animated entities \u2014 (1) Input piston rod translating vertically with scaleY pulse on stroke, (2) Output ram translating with scaleY inverse ratio, (3) 20 fluid particles (circles r=2-4) flowing in manifold with velocity v1/v2, color-shifted by local pressure, (4) 4 pump gear teeth rotating at \u03c9=Q/(\u03c0\u00b7r\u00b3), (5) 4 pressure wave rings expanding from pump outlet, (6) Workpiece (metal blank) compressing under ram with plastic deformation scaleX tween"
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: Live HUD \u2014 (a) Digital pressure gauge (\u00d860mm) at pump with needle tweening 0-400 bar, (b) Force badges: F\u2081=XXX N at input piston, F\u2082=XXX kN at ram, (c) Equation banner: 'P = F\u2081/A\u2081 = F\u2082/A\u2082 = XXX bar' anchored to manifold, (d) Displacement rulers: x\u2081=XXX mm, x\u2082=XXX mm with vernier, (e) Power meter: P_hyd=XXX kW, (f) Efficiency tag: \u03b7=XX%, (g) Stroke limit indicator: red zone at stroke_mm"
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for all SVG node references (cylinders, pistons, particles, gauges, text)",
+      "Wrap all animations in gsap.context(() => { ... }, scopeRef) inside useEffect with [] deps for auto-cleanup",
+      "Animate REAL kinetic transforms: piston rods use y translation (gsap.to(pistonRef, { y: -x1_mm, duration: 0.1, ease: 'none' })), ram uses y translation with inverse ratio, pump gears use rotation (rotation: 360 * sim_time_s * Q_m3_s), fluid particles use x/y translation with velocity-proportional speed",
+      "STRICT PROHIBITION on strokeDasharray-only 'fake flow' \u2014 particles must translate in physical space",
+      "Smooth parameter transitions: gsap.to(derivedState, { duration: 0.5, ease: 'power2.out', onUpdate: forceUpdate }) for F1, d1, d2, Q changes",
+      "Pressure wave rings: gsap.fromTo(ringRef, { scale: 0, opacity: 0.6 }, { scale: 2, opacity: 0, duration: 0.8, repeat: -1, stagger: 0.2 })",
+      "Workpiece deformation: gsap.to(workpieceRef, { scaleX: 1 - x2_mm/stroke_mm*0.15, transformOrigin: 'center', duration: 0.1 })"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_d1",
+      "label": "Input Piston \u00d8",
+      "param": "d1_mm",
+      "type": "slider",
+      "min": 10,
+      "max": 100,
+      "step": 1,
+      "unit": "mm"
+    },
+    {
+      "id": "slider_d2",
+      "label": "Output Piston \u00d8",
+      "param": "d2_mm",
+      "type": "slider",
+      "min": 50,
+      "max": 500,
+      "step": 5,
+      "unit": "mm"
+    },
+    {
+      "id": "slider_F1",
+      "label": "Input Force",
+      "param": "F1_N",
+      "type": "slider",
+      "min": 50,
+      "max": 5000,
+      "step": 50,
+      "unit": "N"
+    },
+    {
+      "id": "slider_Q",
+      "label": "Pump Flow Rate",
+      "param": "Q_L_min",
+      "type": "slider",
+      "min": 1,
+      "max": 100,
+      "step": 1,
+      "unit": "L/min"
+    },
+    {
+      "id": "slider_rho",
+      "label": "Fluid Density",
+      "param": "rho_kg_m3",
+      "type": "slider",
+      "min": 800,
+      "max": 1200,
+      "step": 10,
+      "unit": "kg/m\u00b3"
+    },
+    {
+      "id": "slider_mu",
+      "label": "Viscosity",
+      "param": "mu_Pa_s",
+      "type": "slider",
+      "min": 0.01,
+      "max": 0.2,
+      "step": 0.005,
+      "unit": "Pa\u00b7s"
+    },
+    {
+      "id": "slider_stroke",
+      "label": "Ram Stroke",
+      "param": "stroke_mm",
+      "type": "slider",
+      "min": 20,
+      "max": 500,
+      "step": 10,
+      "unit": "mm"
+    },
+    {
+      "id": "slider_eff",
+      "label": "Efficiency",
+      "param": "efficiency",
+      "type": "slider",
+      "min": 0.7,
+      "max": 1.0,
+      "step": 0.01,
+      "unit": ""
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults",
+        "Step +0.1s",
+        "Fast Forward 5\u00d7"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "System Pressure",
+      "formula": "pressure_bar",
+      "unit": "bar",
+      "precision": 1
+    },
+    {
+      "label": "Output Force",
+      "formula": "F2_actual_N / 1000",
+      "unit": "kN",
+      "precision": 2
+    },
+    {
+      "label": "Force Multiplication",
+      "formula": "force_multiplication",
+      "unit": "\u00d7",
+      "precision": 1
+    },
+    {
+      "label": "Ram Velocity",
+      "formula": "v2_m_s * 1000",
+      "unit": "mm/s",
+      "precision": 1
+    },
+    {
+      "label": "Hydraulic Power",
+      "formula": "power_W / 1000",
+      "unit": "kW",
+      "precision": 2
+    },
+    {
+      "label": "Work Efficiency",
+      "formula": "work_out_J / Math.max(0.001, work_in_J) * 100",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "label": "Reynolds Number",
+      "formula": "reynolds",
+      "unit": "",
+      "precision": 0
+    },
+    {
+      "label": "Stroke Progress",
+      "formula": "Math.min(100, x2_mm / stroke_mm * 100)",
+      "unit": "%",
+      "precision": 1
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Pascal's Principle Activated",
+      "text": "Pressure applied to the small input piston (F\u2081/A\u2081) transmits undiminished through the incompressible hydraulic fluid to the large output piston. Observe the pressure gauge \u2014 it reads identically at both cylinders regardless of diameter."
+    },
+    {
+      "step": 2,
+      "title": "Force Multiplication in Action",
+      "text": "The output force F\u2082 = F\u2081 \u00d7 (A\u2082/A\u2081) = F\u2081 \u00d7 (d\u2082/d\u2081)\u00b2. With d\u2081=25mm and d\u2082=200mm, area ratio = 64\u00d7. Your 500 N input becomes 32 kN output (minus losses). Watch the force badges update live as you adjust diameters."
+    },
+    {
+      "step": 3,
+      "title": "Energy Conservation \u2014 The Displacement Trade-off",
+      "text": "Volume conservation demands A\u2081\u00b7x\u2081 = A\u2082\u00b7x\u2082. The ram moves only 1/64th the distance of the input piston. Work in = Work out (ideal): F\u2081\u00b7x\u2081 = F\u2082\u00b7x\u2082. Power P = F\u2081\u00b7v\u2081 = F\u2082\u00b7v\u2082 remains constant. Adjust flow rate Q to see velocity scaling."
+    },
+    {
+      "step": 4,
+      "title": "Real-World Losses & Dynamic Effects",
+      "text": "Efficiency \u03b7 < 1.0 captures seal friction, fluid compressibility, and leakage. Viscosity \u03bc creates pressure drop \u0394P = 32\u03bcLv/d\u00b2 in lines. Reynolds number indicates flow regime \u2014 keep Re < 2300 for laminar. At high cycle rates, fluid inertia and water hammer appear."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes with dark glassmorphism (bg-slate-950/80 backdrop-blur-sm border-slate-700) and CSS variables for theme colors",
+    "self_contained": true,
+    "component_export": "export default function HydraulicPressPascalDynamics()",
+    "no_broken_dependencies": "All icons are inline SVG (gauge needles, pump gears, pressure waves, force arrows). No external image assets. GSAP loaded via CDN in index.html. Zero runtime dependencies beyond React/GSAP."
+  }
+}

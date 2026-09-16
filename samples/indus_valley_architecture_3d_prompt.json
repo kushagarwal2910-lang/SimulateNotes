@@ -1,0 +1,175 @@
+{
+  "simulation_id": "indus_valley_architecture_3d",
+  "title": "Indus Valley Civilization: 3D Urban Architecture & Hydraulic Engineering",
+  "domain": "Ancient Civil Engineering, Urban Archaeology & 3D Architecture",
+  "render_mode": "3d_threejs",
+  "description": "An interactive 3D architectural exploration of Harappan and Mohenjo-daro urban planning, featuring the standardized 1:2:4 baked brick system, the bitumen-waterproofed Great Bath, covered underground sewer gradients, granary ventilation channels, and passive cooling courtyard houses.",
+  "architectural_model": {
+    "variables": {
+      "view_mode": "great_bath_cutaway",
+      "water_fill_level_m": 1.8,
+      "exploded_cutaway_pct": 25,
+      "drainage_slope_deg": 1.2,
+      "ambient_outside_temp_c": 44,
+      "sun_angle_deg": 60,
+      "bitumen_layer_visible": true,
+      "sewage_flow_active": true
+    },
+    "derived_formulas": {
+      "courtyard_interior_temp_c": "ambient_outside_temp_c - 12.5",
+      "thermal_cooling_delta_c": "12.5",
+      "bitumen_seal_impermeability_pct": "99.6",
+      "sewage_evacuation_velocity_mps": "Math.sqrt(2 * 9.81 * Math.sin(drainage_slope_deg * Math.PI / 180) * 0.35)",
+      "acoustic_noise_attenuation_db": "38",
+      "granary_air_draft_velocity_mps": "1.4",
+      "brick_ratio_str": "1 : 2 : 4 (7cm x 14cm x 28cm)"
+    }
+  },
+  "visual_scene": {
+    "render_target": "threejs_webgl_canvas",
+    "components": [
+      {
+        "id": "threejs_viewport",
+        "description": "Interactive 3D WebGL viewport powered by Three.js with OrbitControls allowing 360-degree rotation, pitch, and zoom."
+      },
+      {
+        "id": "great_bath_3d_structure",
+        "description": "3D sunken rectangular pool (12m x 7m x 2.4m) constructed with fine baked brick courses, gypsum plaster, black natural bitumen tar waterproofing layer between brick skins, dual north/south stepped staircases, and surrounding pillared colonnade."
+      },
+      {
+        "id": "underground_corbelled_drainage_network",
+        "description": "Subterranean vaulted brick sewer running under main street pavers, showing slope gradient, silt inspection soak pits, and domestic waste intake chutes."
+      },
+      {
+        "id": "domestic_courtyard_residence",
+        "description": "Two-story inward-facing brick townhouse with central open-air cooling courtyard, paved bathroom with terracotta pipe chute, and solid unwindowed outer street facades."
+      },
+      {
+        "id": "granary_podium_air_ducts",
+        "description": "Elevated brick sleeper walls forming hollow subterranean ventilation trenches beneath timber grain storage floors to prevent dampness."
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "view_mode",
+      "label": "Architectural Section Focus",
+      "type": "select",
+      "options": [
+        {"value": "great_bath_cutaway", "label": "The Great Bath & Bitumen Tank"},
+        {"value": "underground_drainage", "label": "Subterranean Covered Sewer Network"},
+        {"value": "courtyard_house", "label": "Domestic Courtyard House & Passive Cooling"},
+        {"value": "granary_ventilation", "label": "Great Granary Moisture-Control Ducts"}
+      ],
+      "default": "great_bath_cutaway"
+    },
+    {
+      "id": "exploded_cutaway_pct",
+      "label": "Exploded 3D Cutaway Separation",
+      "type": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 25,
+      "unit": "% Separation"
+    },
+    {
+      "id": "water_fill_level_m",
+      "label": "Great Bath Water Level",
+      "type": "slider",
+      "min": 0.0,
+      "max": 2.4,
+      "step": 0.1,
+      "default": 1.8,
+      "unit": "Meters"
+    },
+    {
+      "id": "sun_angle_deg",
+      "label": "Daylight Sun Angle (Shadow Analysis)",
+      "type": "slider",
+      "min": 15,
+      "max": 165,
+      "step": 5,
+      "default": 60,
+      "unit": "Degrees"
+    },
+    {
+      "id": "ambient_outside_temp_c",
+      "label": "Outside Summer Heat",
+      "type": "slider",
+      "min": 32,
+      "max": 50,
+      "step": 1,
+      "default": 44,
+      "unit": "°C"
+    },
+    {
+      "id": "bitumen_layer_visible",
+      "label": "Inspect Waterproof Bitumen Lining",
+      "type": "toggle",
+      "default": true
+    },
+    {
+      "id": "sewage_flow_active",
+      "label": "Simulate Drainage Water Flow",
+      "type": "toggle",
+      "default": true
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "id": "brick_ratio",
+      "label": "Standard Brick Metric Ratio",
+      "unit": "1:2:4",
+      "precision": 0
+    },
+    {
+      "id": "water_depth",
+      "label": "Bath Water Depth",
+      "unit": "m",
+      "precision": 1
+    },
+    {
+      "id": "bitumen_seal",
+      "label": "Bitumen Impermeability",
+      "unit": "%",
+      "precision": 1
+    },
+    {
+      "id": "courtyard_delta",
+      "label": "Courtyard Cooling Delta",
+      "unit": "°C",
+      "precision": 1
+    },
+    {
+      "id": "sewer_velocity",
+      "label": "Sewer Drainage Velocity",
+      "unit": "m/s",
+      "precision": 2
+    },
+    {
+      "id": "acoustic_isolation",
+      "label": "Facade Acoustic Isolation",
+      "unit": "dB",
+      "precision": 0
+    }
+  ],
+  "educational_cards": [
+    {
+      "title": "The Standardized 1:2:4 Brick Ratio",
+      "content": "Across thousands of square kilometers in the Indus basin, every excavated city used bricks with identical height-to-width-to-length proportions of 1:2:4 (standard size 7 x 14 x 28 cm). This universal modular ratio allowed uniform structural bonding, load distribution, and modular corbelling without cutting bricks."
+    },
+    {
+      "title": "The Great Bath & Natural Bitumen Waterproofing",
+      "content": "Built in the Citadel of Mohenjo-daro circa 2500 BCE, the Great Bath is the oldest public water tank known to history. To prevent seepage, Harappan engineers layered baked bricks bonded with gypsum mortar, followed by a thick continuous sandwich layer of natural bitumen (asphalt pitch), completely sealing the 160-cubic-meter tank."
+    },
+    {
+      "title": "Advanced Covered Underground Drainage",
+      "content": "Centuries before Rome, Indus cities possessed complete underground sewer networks. Brick-lined channels ran beneath every street with a precise 1:50 gravity fall gradient. Silt soak pits collected solids, while removable terracotta and limestone inspection covers permitted routine civil maintenance."
+    },
+    {
+      "title": "Passive Courtyard Cooling & Acoustic Privacy",
+      "content": "Indus residences were designed for harsh desert climates. Houses faced inward toward a private central open courtyard that created a natural convective stack effect. Exterior walls had zero street-level windows, creating a 12°C cooler microclimate and attenuating 38 dB of street noise and dust."
+    }
+  ]
+}

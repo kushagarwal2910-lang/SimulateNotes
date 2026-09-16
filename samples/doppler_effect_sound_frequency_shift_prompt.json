@@ -1,0 +1,235 @@
+{
+  "simulation_id": "doppler_effect_sound_frequency_shift",
+  "title": "Interactive Doppler Effect: Sound Wave Frequency Shift",
+  "topic": "Acoustics & Wave Physics - Doppler Effect",
+  "pedagogical_goal": "This simulation demonstrates how the relative motion between a sound source and an observer alters the perceived frequency of sound waves. Users will visualize wavefront compression and expansion, manipulate source and observer velocities, and quantify the resulting frequency shift using the classical Doppler equation. The goal is to develop an intuitive understanding of why sirens sound higher-pitched when approaching and lower-pitched when receding.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Classical Doppler effect equation for sound: f_observed = f_source * (v_sound \u00b1 v_observer) / (v_sound \u2213 v_source), where the upper sign is used when motion is toward each other and lower sign when moving apart.",
+      "Wavefront spacing: \u03bb_observed = \u03bb_source * (v_sound \u2213 v_source) / (v_sound \u00b1 v_observer), representing compression (shorter wavelength) when source approaches observer and expansion (longer wavelength) when receding.",
+      "Sonic boom condition: When v_source \u2265 v_sound, wavefronts pile up to form a Mach cone with angle \u03b8 = arcsin(v_sound / v_source)."
+    ],
+    "variables": {
+      "f_source": {
+        "name": "Source Frequency",
+        "default": 440,
+        "unit": "Hz",
+        "min": 100,
+        "max": 1000,
+        "step": 10
+      },
+      "v_sound": {
+        "name": "Speed of Sound in Air",
+        "default": 343,
+        "unit": "m/s",
+        "min": 300,
+        "max": 350,
+        "step": 1
+      },
+      "v_source": {
+        "name": "Source Velocity",
+        "default": 0,
+        "unit": "m/s",
+        "min": -100,
+        "max": 100,
+        "step": 1
+      },
+      "v_observer": {
+        "name": "Observer Velocity",
+        "default": 0,
+        "unit": "m/s",
+        "min": -100,
+        "max": 100,
+        "step": 1
+      }
+    },
+    "derived_formulas": {
+      "f_observed": "(v_sound + v_observer) / (v_sound - v_source) * f_source",
+      "wavelength_observed": "(v_sound - v_source) / f_source",
+      "mach_number": "Math.abs(v_source) / v_sound",
+      "mach_angle": "Math.asin(Math.min(1, v_sound / Math.max(0.1, Math.abs(v_source))))",
+      "wavefront_spacing_factor": "(v_sound - v_source) / v_sound"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "sound_source",
+        "type": "SVG_path",
+        "description": "A triangular sound source icon pointing in the direction of motion, positioned at (source_x, 240). Filled with accent color, stroke with primary color. Source_x animates based on v_source * time. Includes a small circle at the tip to indicate emission point.",
+        "svg_path": "M0,-10 L15,0 L0,10 Z",
+        "initial_transform": "translate(200,240)"
+      },
+      {
+        "id": "observer",
+        "type": "SVG_circle",
+        "description": "A circular observer icon (ear) positioned at (observer_x, 240). Filled with secondary color, stroke with accent color. Observer_x animates based on v_observer * time. Includes internal detail lines to represent ear structure.",
+        "cx": 760,
+        "cy": 240,
+        "r": 15
+      },
+      {
+        "id": "wavefronts",
+        "type": "SVG_path_group",
+        "description": "Series of concentric circular wavefronts emitted from the source at regular intervals. Each wavefront is a circle centered at the source's position at the time of emission, with radius expanding at v_sound. Wavefronts are stroked with primary color at 2px width, opacity 0.6. Only wavefronts within viewBox are rendered. Emission frequency determines spacing.",
+        "path_template": "M{cx},{cy} m0,-{r} a{r},{r} 0 1,0 0,{2*r} a{r},{r} 0 1,0 0,-{2*r}",
+        "emission_interval": "1.0 / f_source"
+      },
+      {
+        "id": "mach_cone",
+        "type": "SVG_path",
+        "description": "A conical shock wave (Mach cone) displayed only when Mach number >= 1. Two lines forming a cone behind the source, with angle mach_angle from the direction of motion. Filled with gradient from accent to transparent, stroke with secondary color. Visualizes sonic boom condition.",
+        "svg_path": "M0,0 L{-cone_length * Math.cos(mach_angle)},{-cone_length * Math.sin(mach_angle)} L0,{cone_offset} Z",
+        "cone_length": 100,
+        "cone_offset": 20
+      },
+      {
+        "id": "frequency_indicator",
+        "type": "SVG_text",
+        "description": "Dynamic text element near observer displaying the current f_observed value in Hz, updated in real-time. Filled with accent color, font-size 24px, font-family monospace. Includes label 'Observed Frequency:'.",
+        "x": 500,
+        "y": 100,
+        "text_content": "Observed Frequency: 440 Hz"
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references (source, observer, wavefronts group, mach cone, frequency text)",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "Animate source and observer positions using gsap.to() with linear motion based on v_source and v_observer, updated via useEffect dependency on velocity variables",
+      "Generate wavefronts using a recursive setTimeout or gsap.ticker.add() to emit new circles at intervals of 1/f_source, each expanding radius at v_sound * time_since_emission",
+      "Conditionally render mach_cone component when mach_number >= 1, animating its opacity and length with gsap.fromTo()",
+      "Update frequency_indicator text content using gsap.ticker.add() to parse f_observed formula on each tick",
+      "Smoothly tween reactive state transitions (e.g., when sliders change) using gsap.to() with duration: 0.5 and ease: 'power2.out'"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_f_source",
+      "label": "Source Frequency",
+      "param": "f_source",
+      "type": "slider",
+      "min": 100,
+      "max": 1000,
+      "step": 10,
+      "unit": "Hz"
+    },
+    {
+      "id": "slider_v_source",
+      "label": "Source Velocity",
+      "param": "v_source",
+      "type": "slider",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": "m/s"
+    },
+    {
+      "id": "slider_v_observer",
+      "label": "Observer Velocity",
+      "param": "v_observer",
+      "type": "slider",
+      "min": -100,
+      "max": 100,
+      "step": 1,
+      "unit": "m/s"
+    },
+    {
+      "id": "slider_v_sound",
+      "label": "Speed of Sound",
+      "param": "v_sound",
+      "type": "slider",
+      "min": 300,
+      "max": 350,
+      "step": 1,
+      "unit": "m/s"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Observed Frequency",
+      "formula": "f_observed",
+      "unit": "Hz"
+    },
+    {
+      "label": "Wavelength (Observed)",
+      "formula": "wavelength_observed",
+      "unit": "m"
+    },
+    {
+      "label": "Mach Number",
+      "formula": "mach_number",
+      "unit": ""
+    },
+    {
+      "label": "Mach Angle",
+      "formula": "mach_angle * (180 / Math.PI)",
+      "unit": "degrees"
+    },
+    {
+      "label": "Relative Approach Speed",
+      "formula": "v_source - v_observer",
+      "unit": "m/s"
+    },
+    {
+      "label": "Wavefront Compression Factor",
+      "formula": "wavefront_spacing_factor",
+      "unit": ""
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Stationary Source and Observer",
+      "text": "When both source and observer are at rest (v_source = 0, v_observer = 0), the observed frequency equals the source frequency. Wavefronts are evenly spaced concentric circles, representing a constant pitch sound."
+    },
+    {
+      "step": 2,
+      "title": "Source Moving Toward Observer",
+      "text": "As the source moves toward the observer (v_source > 0), wavefronts compress in front of the source, decreasing wavelength and increasing observed frequency. This corresponds to a higher-pitched sound, like an approaching siren."
+    },
+    {
+      "step": 3,
+      "title": "Source Moving Away from Observer",
+      "text": "As the source moves away from the observer (v_source < 0), wavefronts stretch behind the source, increasing wavelength and decreasing observed frequency. This corresponds to a lower-pitched sound, like a receding siren."
+    },
+    {
+      "step": 4,
+      "title": "Observer in Motion",
+      "text": "If the observer moves toward a stationary source (v_observer > 0), they encounter wavefronts more frequently, increasing observed frequency. If moving away (v_observer < 0), frequency decreases. This demonstrates the symmetry of relative motion in the Doppler effect."
+    },
+    {
+      "step": 5,
+      "title": "Sonic Boom and Mach Cone",
+      "text": "When the source reaches or exceeds the speed of sound (Mach number \u2265 1), wavefronts pile up to form a shock wave known as a Mach cone. This results in a sonic boom\u2014a sudden, intense pressure change heard as a loud boom."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

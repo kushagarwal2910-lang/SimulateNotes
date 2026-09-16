@@ -1,0 +1,416 @@
+{
+  "simulation_id": "paper_factory_simulation",
+  "title": "Industrial Paper Factory: From Pulp to Finished Roll",
+  "topic": "Manufacturing Engineering & Pulp and Paper Technology",
+  "pedagogical_goal": "This simulation demonstrates the core unit operations of a modern paper factory: pulping, refining, sheet formation on a Fourdrinier wire, pressing, drying, and calendering. Users will understand how raw wood or recycled fiber is transformed into a continuous paper web, and how key process variables (refining energy, moisture content, drying temperature) affect final paper properties such as thickness, density, and tensile strength.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Mass conservation: Input dry fiber mass = Output dry fiber mass + losses",
+      "Water removal kinetics: Rate of evaporation \u221d (T_dry - T_wet) * surface_area * air_flow",
+      "Fiber bonding theory: Tensile strength \u221d (refining_energy)^0.5 * (1 - moisture_content)^2",
+      "Newtonian fluid flow for stock: Flow rate \u221d pressure_drop / viscosity",
+      "Heat transfer in drying cylinders: Q = h * A * (T_cylinder - T_web)"
+    ],
+    "variables": {
+      "refining_energy": {
+        "name": "Refining Energy (kWh/ton)",
+        "default": 150,
+        "unit": "kWh/ton",
+        "min": 50,
+        "max": 300,
+        "step": 10
+      },
+      "moisture_content": {
+        "name": "Web Moisture Content (%)",
+        "default": 5,
+        "unit": "%",
+        "min": 2,
+        "max": 10,
+        "step": 0.5
+      },
+      "drying_temp": {
+        "name": "Drying Cylinder Temperature (\u00b0C)",
+        "default": 120,
+        "unit": "\u00b0C",
+        "min": 80,
+        "max": 160,
+        "step": 5
+      },
+      "fourdrinier_speed": {
+        "name": "Fourdrinier Wire Speed (m/min)",
+        "default": 300,
+        "unit": "m/min",
+        "min": 100,
+        "max": 600,
+        "step": 20
+      },
+      "fiber_length": {
+        "name": "Average Fiber Length (mm)",
+        "default": 2.5,
+        "unit": "mm",
+        "min": 1.0,
+        "max": 4.0,
+        "step": 0.1
+      }
+    },
+    "derived_formulas": {
+      "tensile_strength_index": "Math.sqrt(refining_energy) * Math.pow(1 - moisture_content/100, 2) * 0.01",
+      "web_thickness_mm": "4.5 / (1 + refining_energy/200) * (1 + moisture_content/20)",
+      "drying_rate_kg_m2s": "0.001 * (drying_temp - 80) * Math.sqrt(fourdrinier_speed/300)",
+      "energy_consumption_mj_ton": "refining_energy * 3.6 + 2000 * (drying_temp - 80) / 100",
+      "production_rate_ton_hr": "fourdrinier_speed * 0.002 * (1 - moisture_content/100)"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_industrial_factory",
+    "background": "#0a0a0a",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#fbbf24",
+      "secondary": "#ef4444",
+      "accent": "#10b981",
+      "glow": "rgba(251, 191, 36, 0.25)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Factory floor with safety yellow grid lines, structural columns, and overhead crane rails. Includes faint ISO safety symbols and process flow diagram in background.",
+        "styles": {
+          "grid": "stroke:#2d3748; stroke-width:0.5",
+          "columns": "fill:#1a202c",
+          "crane_rail": "stroke:#4a5568; stroke-width:2"
+        }
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive paper machine silhouette comprising headbox, Fourdrinier wire section, press section, dryer section (6 cylinders), and calender stack. Occupies ~75% of canvas height, built from closed Bezier paths with shading.",
+        "path_data": "M50 400 C50 200 200 100 400 100 S750 100 900 200 C900 300 800 380 700 400 L500 400 C450 380 350 380 300 400 Z",
+        "styles": {
+          "fill": "url(#machineBodyGradient)",
+          "stroke": "#4a5568",
+          "stroke-width": "3"
+        },
+        "gradients": [
+          {
+            "id": "machineBodyGradient",
+            "type": "linear",
+            "x1": "0%",
+            "y1": "0%",
+            "x2": "0%",
+            "y2": "100%",
+            "stops": [
+              {
+                "offset": "0%",
+                "color": "#2d3748"
+              },
+              {
+                "offset": "100%",
+                "color": "#1a202c"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Moving paper web visualized as a semi-transparent sheet with dynamic opacity and color gradient representing moisture content. Shows stock jet impingement on wire and water removal progression.",
+        "web_path": "M400 100 Q450 80 500 100 T600 100 T700 100 T800 100",
+        "styles": {
+          "fill": "url(#webGradient)",
+          "opacity": "0.8"
+        },
+        "gradients": [
+          {
+            "id": "webGradient",
+            "type": "linear",
+            "x1": "0%",
+            "y1": "0%",
+            "x2": "100%",
+            "y2": "0%",
+            "stops": [
+              {
+                "offset": "0%",
+                "color": "#38bdf8",
+                "opacity": "0.3"
+              },
+              {
+                "offset": "100%",
+                "color": "#34d399",
+                "opacity": "0.7"
+              }
+            ]
+          }
+        ],
+        "filters": [
+          {
+            "id": "webGlow",
+            "type": "glow",
+            "color": "rgba(56, 189, 248, 0.35)",
+            "spread": "5"
+          }
+        ]
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 30 animated elements including: 10 fiber particles showing flocculation/dispersion, 5 water droplets being removed, 5 rotating dryer cylinder shells, 5 press roll nips, and 5 calender roll surfaces. All driven by GSAP timelines.",
+        "particle_definitions": [
+          {
+            "id": "fiber_particle",
+            "count": 10,
+            "type": "svg_circle",
+            "radius": "1.5",
+            "color": "#fbbf24"
+          },
+          {
+            "id": "water_droplet",
+            "count": 5,
+            "type": "svg_circle",
+            "radius": "1",
+            "color": "#60a5fa"
+          },
+          {
+            "id": "dryer_shell",
+            "count": 5,
+            "type": "svg_path",
+            "d": "M0,-10 A10,10 0 0,1 0,10 A10,10 0 0,1 0,-10 Z",
+            "color": "#ef4444"
+          },
+          {
+            "id": "press_nip",
+            "count": 5,
+            "type": "svg_rect",
+            "width": "8",
+            "height": "4",
+            "color": "#6b7280"
+          },
+          {
+            "id": "calender_surface",
+            "count": 5,
+            "type": "svg_rect",
+            "width": "12",
+            "height": "2",
+            "color": "#9ca3af"
+          }
+        ],
+        "animation_mapping": {
+          "fiber_particle": "translation along web path with Brownian motion",
+          "water_droplet": "radial ejection from web surface during pressing",
+          "dryer_shell": "rotation synchronized with web speed",
+          "press_nip": "vertical oscillation simulating nip pressure",
+          "calender_surface": "rotation with web, speed proportional to fourdrinier_speed"
+        }
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ process control badges: (1) Refining energy monitor on refiner vessel, (2) Moisture sensor array after press section, (3) Dryer surface temperature probes, (4) Basis weight gauge on reel, (5) Tensile strength tester schematic near calender.",
+        "badges": [
+          {
+            "id": "refiner_energy_badge",
+            "label": "Refining: {refining_energy} kWh/ton",
+            "x": 200,
+            "y": 150
+          },
+          {
+            "id": "moisture_probe_badge",
+            "label": "Moisture: {moisture_content}%",
+            "x": 500,
+            "y": 220
+          },
+          {
+            "id": "dryer_temp_badge",
+            "label": "Dryer Temp: {drying_temp}\u00b0C",
+            "x": 650,
+            "y": 180
+          },
+          {
+            "id": "basis_weight_gauge",
+            "label": "Basis Weight: {production_rate_ton_hr*1000/60} g/m\u00b2",
+            "x": 800,
+            "y": 300
+          },
+          {
+            "id": "tensile_tester",
+            "label": "Tensile: {tensile_strength_index.toFixed(2)} kN/m",
+            "x": 850,
+            "y": 380
+          }
+        ],
+        "styles": {
+          "badge_bg": "fill:#1e293b; fill-opacity:0.8; stroke:#334155; stroke-width:1",
+          "badge_text": "fill:#fbbf24; font-family:'Courier New', monospace; font-size:10px"
+        }
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate rotation for motors/rollers, translation for conveyors/drift, and scaleX/scaleY for morphological peristalsis/expansion",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ],
+    "specific_animations": [
+      {
+        "target": "#web_path",
+        "property": "stroke-dashoffset",
+        "value": "gsap.utils.wrap([0, 1000], {fourdrinier_speed})",
+        "duration": 0.1,
+        "repeat": -1
+      },
+      {
+        "target": ".dryer_shell",
+        "property": "rotation",
+        "value": "360 * (fourdrinier_speed/300)",
+        "duration": 0.5,
+        "repeat": -1,
+        "transformOrigin": "center"
+      },
+      {
+        "target": ".water_droplet",
+        "property": "cy",
+        "value": "gsap.utils.random(100, 220)",
+        "duration": 0.3,
+        "repeat": -1,
+        "yoyo": true
+      },
+      {
+        "target": ".fiber_particle",
+        "property": "x",
+        "value": "gsap.utils.random(400, 800)",
+        "duration": 0.5,
+        "repeat": -1,
+        "yoyo": true
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "refining_energy_slider",
+      "label": "Refining Energy",
+      "param": "refining_energy",
+      "type": "slider",
+      "min": 50,
+      "max": 300,
+      "step": 10,
+      "unit": "kWh/ton"
+    },
+    {
+      "id": "moisture_content_slider",
+      "label": "Target Moisture",
+      "param": "moisture_content",
+      "type": "slider",
+      "min": 2,
+      "max": 10,
+      "step": 0.5,
+      "unit": "%"
+    },
+    {
+      "id": "drying_temp_slider",
+      "label": "Drying Temperature",
+      "param": "drying_temp",
+      "type": "slider",
+      "min": 80,
+      "max": 160,
+      "step": 5,
+      "unit": "\u00b0C"
+    },
+    {
+      "id": "fourdrinier_speed_slider",
+      "label": "Machine Speed",
+      "param": "fourdrinier_speed",
+      "type": "slider",
+      "min": 100,
+      "max": 600,
+      "step": 20,
+      "unit": "m/min"
+    },
+    {
+      "id": "fiber_length_slider",
+      "label": "Fiber Length",
+      "param": "fiber_length",
+      "type": "slider",
+      "min": 1.0,
+      "max": 4.0,
+      "step": 0.1,
+      "unit": "mm"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Tensile Strength Index",
+      "formula": "tensile_strength_index",
+      "unit": "kN/m"
+    },
+    {
+      "label": "Web Thickness",
+      "formula": "web_thickness_mm",
+      "unit": "mm"
+    },
+    {
+      "label": "Drying Rate",
+      "formula": "drying_rate_kg_m2s",
+      "unit": "kg/m\u00b2\u00b7s"
+    },
+    {
+      "label": "Energy Consumption",
+      "formula": "energy_consumption_mj_ton",
+      "unit": "MJ/ton"
+    },
+    {
+      "label": "Production Rate",
+      "formula": "production_rate_ton_hr",
+      "unit": "ton/hr"
+    },
+    {
+      "label": "Web Moisture",
+      "formula": "moisture_content",
+      "unit": "%"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Stock Preparation & Refining",
+      "text": "Wood chips or recycled fiber are pulped and refined. Increasing refining energy fibrillates fibers, increasing surface area for bonding but also energy consumption. Optimal refining balances strength development with drainage resistance."
+    },
+    {
+      "step": 2,
+      "title": "Sheet Formation on Fourdrinier Wire",
+      "text": "Diluted stock (0.5% consistency) is jetted onto a moving wire. Water drains by gravity and vacuum, forming a fragile web. Fourdrinier speed determines production rate and influences fiber orientation and formation quality."
+    },
+    {
+      "step": 3,
+      "title": "Pressing and Drying Sections",
+      "text": "The wet web passes through nips of press rolls to remove water mechanically, then through steam-heated dryer cylinders where evaporation completes moisture removal. Dryer temperature and web residence time dictate final moisture content and energy efficiency."
+    },
+    {
+      "step": 4,
+      "title": "Calendering and Reeling",
+      "text": "The dry web passes through calender rolls to smooth surface and control thickness. Finally, it is wound onto a reel. Final paper properties depend on the entire process history, particularly refining and drying conditions."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

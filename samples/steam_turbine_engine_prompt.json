@@ -1,0 +1,347 @@
+{
+  "simulation_id": "steam_turbine_engine",
+  "title": "Multi-Stage Steam Turbine Engine with Governing System",
+  "topic": "Thermodynamics & Power Generation Engineering",
+  "pedagogical_goal": "Demonstrate how a steam turbine converts high-pressure steam thermal energy into rotational mechanical work through impulse and reaction stages, and how a centrifugal governor maintains constant rotational speed under varying load by modulating steam inlet flow via throttle valves.",
+  "physics_model": {
+    "fundamental_laws": [
+      "First Law of Thermodynamics for open systems: \u1e41(h\u2081 - h\u2082) = \u1e86_turbine + Q_loss",
+      "Euler's turbine equation: \u1e86 = \u1e41 * (U\u2082V\u2082\u03b8 - U\u2081V\u2081\u03b8)",
+      "Isentropic efficiency: \u03b7_t = (h\u2081 - h\u2082\u2090) / (h\u2081 - h\u2082\u209b)",
+      "Centrifugal governor equilibrium: m\u03c9\u00b2r = kx + F_spring",
+      "Continuity equation: \u1e41 = \u03c1 * A * V"
+    ],
+    "variables": {
+      "inlet_pressure": {
+        "name": "Steam Inlet Pressure",
+        "default": 10.0,
+        "unit": "MPa",
+        "min": 1.0,
+        "max": 20.0,
+        "step": 0.5
+      },
+      "inlet_temperature": {
+        "name": "Steam Inlet Temperature",
+        "default": 500.0,
+        "unit": "\u00b0C",
+        "min": 200.0,
+        "max": 600.0,
+        "step": 10.0
+      },
+      "mass_flow_rate": {
+        "name": "Steam Mass Flow Rate",
+        "default": 50.0,
+        "unit": "kg/s",
+        "min": 5.0,
+        "max": 150.0,
+        "step": 5.0
+      },
+      "load_torque": {
+        "name": "Electrical Load Torque",
+        "default": 1000.0,
+        "unit": "N\u00b7m",
+        "min": 100.0,
+        "max": 5000.0,
+        "step": 50.0
+      },
+      "governor_gain": {
+        "name": "Governor Sensitivity Gain",
+        "default": 0.8,
+        "unit": "",
+        "min": 0.1,
+        "max": 2.0,
+        "step": 0.1
+      },
+      "exhaust_pressure": {
+        "name": "Condenser Exhaust Pressure",
+        "default": 0.01,
+        "unit": "MPa",
+        "min": 0.005,
+        "max": 0.1,
+        "step": 0.005
+      }
+    },
+    "derived_formulas": {
+      "inlet_enthalpy": "2500 + 2.1 * inlet_temperature + 0.001 * inlet_pressure * 1000",
+      "isentropic_enthalpy_drop": "(inlet_enthalpy - (191.8 + 0.001 * exhaust_pressure * 1e6 * 2.1 * (inlet_temperature + 273))) * 0.85",
+      "actual_enthalpy_drop": "isentropic_enthalpy_drop * 0.88",
+      "turbine_power": "mass_flow_rate * actual_enthalpy_drop * 1000",
+      "rotational_speed": "Math.sqrt(turbine_power / 0.05) * (1 - governor_gain * Math.max(0, (turbine_power / load_torque - 1800) / 1800))",
+      "governor_sleeve_position": "governor_gain * Math.max(0, (rotational_speed - 1800) / 1800) * 10",
+      "throttle_valve_opening": "Math.max(0.1, Math.min(1.0, 1 - governor_sleeve_position / 15))",
+      "effective_mass_flow": "mass_flow_rate * throttle_valve_opening",
+      "stage_efficiency": "0.82 + 0.1 * Math.sin(Math.PI * inlet_pressure / 20)",
+      "exhaust_quality": "Math.max(0.8, Math.min(0.98, 0.85 + 0.001 * (inlet_temperature - 300)))"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Structural background grid pattern with isometric guidelines and pressure/temperature axis labels (width: 960, height: 480).",
+        "properties": {
+          "grid_spacing": 40,
+          "axis_labels": [
+            "Pressure (MPa)",
+            "Temperature (\u00b0C)"
+          ],
+          "isometric_angle": 30
+        }
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Massive closed outer turbine casing silhouette occupying >= 65% of viewport, multi-stage rotor-stator assembly with inlet volute and exhaust diffuser.",
+        "properties": {
+          "path_data": "M120 80 C180 40, 300 40, 360 80 L600 80 C660 40, 780 40, 840 80 L840 400 C780 440, 660 440, 600 400 L360 400 C300 440, 180 440, 120 400 Z",
+          "stator_blades": 24,
+          "rotor_disks": 8,
+          "blade_height": 40
+        }
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: High-pressure steam plume (dark blue) expanding through stages to low-pressure exhaust (pale cyan), with density gradients showing enthalpy drop.",
+        "properties": {
+          "gradient_type": "linear",
+          "gradient_stops": [
+            {
+              "offset": "0%",
+              "color": "#0ea5e9",
+              "opacity": 0.9
+            },
+            {
+              "offset": "30%",
+              "color": "#38bdf8",
+              "opacity": 0.7
+            },
+            {
+              "offset": "70%",
+              "color": "#a5b4fc",
+              "opacity": 0.4
+            },
+            {
+              "offset": "100%",
+              "color": "#e0e7ff",
+              "opacity": 0.1
+            }
+          ],
+          "filter_id": "steamGlow",
+          "filter_properties": {
+            "stdDeviation": "3",
+            "flood-color": "#38bdf8",
+            "flood-opacity": "0.2"
+          }
+        }
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 32 discrete steam particles tracing pathlines through nozzle rows and blade passages, plus 8 rotor disks with blades rotating at calculated RPM.",
+        "properties": {
+          "particle_count": 32,
+          "particle_lifetime": 2.0,
+          "rotor_inertia": 500,
+          "blade_count_per_disk": 12,
+          "particle_trace_length": 15
+        }
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ labels showing throttle valve position, governor sleeve displacement, stage pressure/temperature, and power output equation.",
+        "properties": {
+          "badges": [
+            {
+              "id": "throttle_badge",
+              "label": "Throttle",
+              "format": "valve_opening",
+              "unit": "%"
+            },
+            {
+              "id": "governor_badge",
+              "label": "Governor",
+              "format": "sleeve_pos",
+              "unit": "mm"
+            },
+            {
+              "id": "power_badge",
+              "label": "Power Output",
+              "format": "turbine_power",
+              "unit": "MW"
+            },
+            {
+              "id": "speed_badge",
+              "label": "RPM",
+              "format": "rotational_speed",
+              "unit": "rpm"
+            },
+            {
+              "id": "efficiency_badge",
+              "label": "Stage \u03b7",
+              "format": "stage_efficiency",
+              "unit": ""
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate rotation for motors/rollers, translation for conveyors/drift, and scaleX/scaleY for morphological peristalsis/expansion",
+      "STRICT PROHIBITION on fake animations that merely toggle strokeDasharray on static lines",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ],
+    "specific_animations": [
+      {
+        "target": "rotor_disks",
+        "property": "rotation",
+        "expression": "rotational_speed * 0.1047",
+        "units": "rad/s"
+      },
+      {
+        "target": "steam_particles",
+        "property": "motionPath",
+        "expression": "effective_mass_flow * 0.05"
+      },
+      {
+        "target": "governor_sleeve",
+        "property": "y",
+        "expression": "-governor_sleeve_position"
+      },
+      {
+        "target": "throttle_valve",
+        "property": "x",
+        "expression": "(1 - throttle_valve_opening) * 20"
+      }
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_inlet_pressure",
+      "label": "Inlet Pressure",
+      "param": "inlet_pressure",
+      "type": "slider",
+      "min": 1.0,
+      "max": 20.0,
+      "step": 0.5,
+      "unit": "MPa"
+    },
+    {
+      "id": "slider_inlet_temperature",
+      "label": "Inlet Temperature",
+      "param": "inlet_temperature",
+      "type": "slider",
+      "min": 200.0,
+      "max": 600.0,
+      "step": 10.0,
+      "unit": "\u00b0C"
+    },
+    {
+      "id": "slider_load_torque",
+      "label": "Load Torque",
+      "param": "load_torque",
+      "type": "slider",
+      "min": 100.0,
+      "max": 5000.0,
+      "step": 50.0,
+      "unit": "N\u00b7m"
+    },
+    {
+      "id": "slider_governor_gain",
+      "label": "Governor Gain",
+      "param": "governor_gain",
+      "type": "slider",
+      "min": 0.1,
+      "max": 2.0,
+      "step": 0.1,
+      "unit": ""
+    },
+    {
+      "id": "button_group_playback",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Thermal Power Input",
+      "formula": "mass_flow_rate * inlet_enthalpy * 1000 / 1e6",
+      "unit": "MW"
+    },
+    {
+      "label": "Mechanical Power Output",
+      "formula": "turbine_power / 1e6",
+      "unit": "MW"
+    },
+    {
+      "label": "Turbine Efficiency",
+      "formula": "turbine_power / (mass_flow_rate * inlet_enthalpy * 1000)",
+      "unit": ""
+    },
+    {
+      "label": "Steam Velocity at Nozzle Exit",
+      "formula": "Math.sqrt(2 * actual_enthalpy_drop * 1000)",
+      "unit": "m/s"
+    },
+    {
+      "label": "Governor Error (RPM - 1800)",
+      "formula": "rotational_speed - 1800",
+      "unit": "rpm"
+    },
+    {
+      "label": "Condenser Vacuum",
+      "formula": "0.1013 - exhaust_pressure",
+      "unit": "MPa"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "High-Pressure Steam Entry",
+      "text": "Superheated steam enters at high pressure and temperature, passing through throttle valve controlled by governor. Energy available for work is determined by inlet enthalpy."
+    },
+    {
+      "step": 2,
+      "title": "Expansion Through Turbine Stages",
+      "text": "Steam expands through alternating nozzle (impulse) and blade (reaction) rows, converting enthalpy drop into kinetic energy then torque on rotor blades. Pressure and temperature decrease progressively."
+    },
+    {
+      "step": 3,
+      "title": "Speed Governing Mechanism",
+      "text": "Centrifugal governor senses rotational speed; if speed increases, flyweights move outward, lifting sleeve to reduce throttle valve opening, decreasing steam flow and power to maintain constant RPM under varying load."
+    },
+    {
+      "step": 4,
+      "title": "Exhaust and Condensation",
+      "text": "Low-pressure steam exits to condenser where it is condensed to water, creating vacuum that increases enthalpy drop across turbine. Condensate is fed back to boiler to complete Rankine cycle."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

@@ -1,0 +1,301 @@
+{
+  "simulation_id": "rocket_thrust_until_exosphere",
+  "title": "Rocket Thrust Dynamics Until Exosphere Boundary",
+  "topic": "Aerospace Engineering / Rocket Propulsion / Newtonian Mechanics",
+  "pedagogical_goal": "Visualize how rocket thrust is generated via Newton's third law, how thrust varies with altitude due to changing atmospheric pressure and exhaust velocity, and understand the physical limits before reaching the exosphere where atmospheric drag becomes negligible.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Newton's Second Law: F_net = m * a, where F_net = thrust - weight - drag",
+      "Thrust Equation: F_thrust = \u1e41 * v_e + (p_e - p_a) * A_e, where \u1e41 = propellant mass flow rate, v_e = effective exhaust velocity, p_e = exhaust pressure, p_a = ambient pressure, A_e = nozzle exit area",
+      "Mass Conservation: dm/dt = -\u1e41 (rocket mass decreases as propellant is burned)",
+      "Drag Force: F_drag = 0.5 * \u03c1 * v^2 * C_d * A, where \u03c1 = atmospheric density, v = velocity, C_d = drag coefficient, A = cross-sectional area",
+      "Atmospheric Density Model: \u03c1(h) = \u03c1_0 * exp(-h / H), scale height H \u2248 8500 m for troposphere/stratosphere",
+      "Ambient Pressure: p_a(h) = p_0 * exp(-h / H_p), scale height H_p \u2248 7400 m",
+      "Gravitational Acceleration: g(h) = G * M_earth / (R_earth + h)^2"
+    ],
+    "variables": {
+      "throttle": {
+        "name": "Throttle Level",
+        "default": 0.8,
+        "unit": "%",
+        "min": 0.1,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "specific_impulse": {
+        "name": "Specific Impulse (I_sp)",
+        "default": 300,
+        "unit": "s",
+        "min": 200,
+        "max": 450,
+        "step": 10
+      },
+      "propellant_mass_initial": {
+        "name": "Initial Propellant Mass",
+        "default": 200000,
+        "unit": "kg",
+        "min": 50000,
+        "max": 500000,
+        "step": 10000
+      },
+      "dry_mass": {
+        "name": "Dry Mass (Rocket Structure)",
+        "default": 50000,
+        "unit": "kg",
+        "min": 10000,
+        "max": 100000,
+        "step": 5000
+      },
+      "nozzle_exit_area": {
+        "name": "Nozzle Exit Area",
+        "default": 2.0,
+        "unit": "m\u00b2",
+        "min": 0.5,
+        "max": 5.0,
+        "step": 0.1
+      },
+      "drag_coefficient": {
+        "name": "Drag Coefficient (C_d)",
+        "default": 0.5,
+        "unit": "",
+        "min": 0.2,
+        "max": 1.0,
+        "step": 0.05
+      },
+      "cross_sectional_area": {
+        "name": "Cross-Sectional Area",
+        "default": 10.0,
+        "unit": "m\u00b2",
+        "min": 5.0,
+        "max": 20.0,
+        "step": 0.5
+      },
+      "altitude": {
+        "name": "Altitude",
+        "default": 0,
+        "unit": "m",
+        "min": 0,
+        "max": 120000,
+        "step": 1000
+      },
+      "velocity": {
+        "name": "Velocity",
+        "default": 0,
+        "unit": "m/s",
+        "min": -1000,
+        "max": 10000,
+        "step": 10
+      },
+      "time_elapsed": {
+        "name": "Time Elapsed",
+        "default": 0,
+        "unit": "s",
+        "min": 0,
+        "max": 300,
+        "step": 1
+      }
+    },
+    "derived_formulas": {
+      "exhaust_velocity": "specific_impulse * 9.80665",
+      "mass_flow_rate": "throttle * (propellant_mass_initial / 120)",
+      "current_mass": "Math.max(dry_mass, propellant_mass_initial + dry_mass - mass_flow_rate * time_elapsed)",
+      "thrust_momentum": "mass_flow_rate * exhaust_velocity",
+      "ambient_pressure": "101325 * Math.exp(-altitude / 7400)",
+      "exhaust_pressure": "20000",
+      "pressure_thrust": "(exhaust_pressure - ambient_pressure) * nozzle_exit_area",
+      "total_thrust": "thrust_momentum + pressure_thrust",
+      "weight": "current_mass * (9.80665 * Math.pow(6371000, 2) / Math.pow(6371000 + altitude, 2))",
+      "atmospheric_density": "1.225 * Math.exp(-altitude / 8500)",
+      "drag_force": "0.5 * atmospheric_density * Math.pow(velocity, 2) * drag_coefficient * cross_sectional_area",
+      "net_force": "total_thrust - weight - drag_force",
+      "acceleration": "net_force / current_mass",
+      "fuel_fraction_remaining": "Math.max(0, (propellant_mass_initial - mass_flow_rate * time_elapsed) / propellant_mass_initial)"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_engineering_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "environment_context",
+        "type": "SVG_grid_and_framing",
+        "description": "Layer 1: Technical background with altitude grid (0-120 km), atmospheric layer labels (troposphere, stratosphere, mesosphere, thermosphere), and Earth curvature hint at bottom."
+      },
+      {
+        "id": "primary_enclosure_silhouette",
+        "type": "volumetric_SVG_path",
+        "description": "Layer 2: Multi-stage rocket silhouette (Falcon 9-like) occupying >65% height. Closed path with fuel tanks, interstage, nose cone, and nozzle details using cubic Bezier curves. Filled with dark gray (#2d3748) and white accents."
+      },
+      {
+        "id": "active_volumetric_medium",
+        "type": "reactive_gradient_medium",
+        "description": "Layer 3: Exhaust plume extending from nozzle. Uses <linearGradient> from transparent to bright orange/yellow, dynamically tinted and scaled by total_thrust. Includes <filter id='glow'> for heat distortion. Opacity and length vary with thrust and ambient pressure."
+      },
+      {
+        "id": "kinetic_actors_and_particles",
+        "type": "gsap_animated_particles_or_mechanisms",
+        "description": "Layer 4: 30-40 exhaust particles (molecules) emitted from nozzle with velocity proportional to exhaust_velocity. Also includes 5-10 ambient air particles showing drag interaction (slowed near rocket). All animated via GSAP with physics-based motion."
+      },
+      {
+        "id": "in_situ_instrumentation_callouts",
+        "type": "in_situ_SVG_hud_badges",
+        "description": "Layer 5: In-situ HUD badges: (1) Thrust vector arrow with magnitude, (2) Altitude meter, (3) Velocity readout, (4) Fuel gauge, (5) Drag vs Thrust comparison badge, all anchored to rocket body and updating in real-time."
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references (rocket, plume, particles, HUD)",
+      "Use gsap.context() inside useEffect for cleanup",
+      "MANDATE REAL KINETIC TRANSFORMS: Animate rocket translation (y) based on integrated acceleration, rotate for pitch if gimbal added later, scale exhaust plume length with total_thrust, particle emission rate with mass_flow_rate",
+      "STRICT PROHIBITION on fake animations: No strokeDasharray tricks; all motion must reflect real physics",
+      "Smoothly tween state transitions: gsap.to(vars, {duration: 0.3, onUpdate: updateHUD})"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "throttle_slider",
+      "label": "Throttle Level",
+      "param": "throttle",
+      "type": "slider",
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05,
+      "unit": "%"
+    },
+    {
+      "id": "specific_impulse_slider",
+      "label": "Specific Impulse (I_sp)",
+      "param": "specific_impulse",
+      "type": "slider",
+      "min": 200,
+      "max": 450,
+      "step": 10,
+      "unit": "s"
+    },
+    {
+      "id": "propellant_mass_slider",
+      "label": "Initial Propellant Mass",
+      "param": "propellant_mass_initial",
+      "type": "slider",
+      "min": 50000,
+      "max": 500000,
+      "step": 10000,
+      "unit": "kg"
+    },
+    {
+      "id": "dry_mass_slider",
+      "label": "Dry Mass",
+      "param": "dry_mass",
+      "type": "slider",
+      "min": 10000,
+      "max": 100000,
+      "step": 5000,
+      "unit": "kg"
+    },
+    {
+      "id": "altitude_slider",
+      "label": "Altitude",
+      "param": "altitude",
+      "type": "slider",
+      "min": 0,
+      "max": 120000,
+      "step": 1000,
+      "unit": "m"
+    },
+    {
+      "id": "velocity_slider",
+      "label": "Velocity",
+      "param": "velocity",
+      "type": "slider",
+      "min": -1000,
+      "max": 10000,
+      "step": 10,
+      "unit": "m/s"
+    },
+    {
+      "id": "time_elapsed_slider",
+      "label": "Time Elapsed",
+      "param": "time_elapsed",
+      "type": "slider",
+      "min": 0,
+      "max": 300,
+      "step": 1,
+      "unit": "s"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Altitude",
+      "formula": "altitude",
+      "unit": "m"
+    },
+    {
+      "label": "Velocity",
+      "formula": "velocity",
+      "unit": "m/s"
+    },
+    {
+      "label": "Thrust",
+      "formula": "total_thrust",
+      "unit": "N"
+    },
+    {
+      "label": "Acceleration",
+      "formula": "acceleration",
+      "unit": "m/s\u00b2"
+    },
+    {
+      "label": "Fuel Remaining",
+      "formula": "fuel_fraction_remaining * 100",
+      "unit": "%"
+    },
+    {
+      "label": "Drag Force",
+      "formula": "drag_force",
+      "unit": "N"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Ignition & Liftoff",
+      "text": "At sea level, high ambient pressure reduces effective thrust via pressure term. Thrust must exceed weight + drag for liftoff."
+    },
+    {
+      "step": 2,
+      "title": "Ascent Through Atmosphere",
+      "text": "As altitude rises, ambient pressure drops, increasing thrust efficiency (better nozzle expansion). Drag peaks then decreases as air thins."
+    },
+    {
+      "step": 3,
+      "title": "Approaching Exosphere Boundary",
+      "text": "Above ~100 km, drag becomes negligible. Thrust is now primarily momentum-driven. Rocket continues accelerating until fuel depletion or cutoff."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}

@@ -1,0 +1,296 @@
+{
+  "simulation_id": "human_kidney_nephron_function",
+  "title": "Human Kidney Nephron Filtration and Reabsorption",
+  "topic": "Human Physiology - Renal System",
+  "pedagogical_goal": "This simulation demonstrates the two-step process of kidney function: glomerular filtration of blood plasma and tubular reabsorption/secretion in the nephron. Users will visualize how blood pressure drives filtration, how essential substances are reabsorbed, and how waste products become urine, while adjusting key physiological parameters to observe their impact on filtration rate and urine composition.",
+  "physics_model": {
+    "fundamental_laws": [
+      "Glomerular Filtration Rate (GFR) = Kf \u00d7 (P_GC - P_BC - \u03c0_GC)",
+      "Tubular Reabsorption Rate = Tm \u00d7 (1 - e^(-k \u00d7 [Substance]))",
+      "Urine Flow Rate = GFR \u00d7 (1 - Fractional Reabsorption)",
+      "Net Filtration Pressure = Glomerular Capillary Pressure - Bowman's Capsule Pressure - Glomerular Plasma Oncotic Pressure"
+    ],
+    "variables": {
+      "glomerular_capillary_pressure": {
+        "name": "Glomerular Capillary Pressure",
+        "default": 45,
+        "unit": "mmHg",
+        "min": 30,
+        "max": 60,
+        "step": 1
+      },
+      "bowmans_capsule_pressure": {
+        "name": "Bowman's Capsule Pressure",
+        "default": 15,
+        "unit": "mmHg",
+        "min": 10,
+        "max": 20,
+        "step": 0.5
+      },
+      "glomerular_plasma_oncotic_pressure": {
+        "name": "Glomerular Plasma Oncotic Pressure",
+        "default": 25,
+        "unit": "mmHg",
+        "min": 15,
+        "max": 35,
+        "step": 1
+      },
+      "filtration_coefficient": {
+        "name": "Filtration Coefficient (Kf)",
+        "default": 12.5,
+        "unit": "mL/min/mmHg",
+        "min": 5,
+        "max": 20,
+        "step": 0.5
+      },
+      "plasma_glucose_concentration": {
+        "name": "Plasma Glucose Concentration",
+        "default": 5,
+        "unit": "mM",
+        "min": 3,
+        "max": 20,
+        "step": 0.5
+      },
+      "tubular_transport_maximum": {
+        "name": "Tubular Transport Maximum for Glucose (Tm)",
+        "default": 375,
+        "unit": "mg/min",
+        "min": 200,
+        "max": 500,
+        "step": 10
+      }
+    },
+    "derived_formulas": {
+      "net_filtration_pressure": "glomerular_capillary_pressure - bowmans_capsule_pressure - glomerular_plasma_oncotic_pressure",
+      "glomerular_filtration_rate": "filtration_coefficient * Math.max(0, net_filtration_pressure)",
+      "filtered_glucose_load": "glomerular_filtration_rate * plasma_glucose_concentration * 0.18",
+      "glucose_reabsorption_rate": "Math.min(filtered_glucose_load, tubular_transport_maximum * (1 - Math.exp(-0.02 * plasma_glucose_concentration)))",
+      "glucose_excretion_rate": "Math.max(0, filtered_glucose_load - glucose_reabsorption_rate)",
+      "urine_flow_rate": "glomerular_filtration_rate * 0.8",
+      "fractional_sodium_reabsorption": "0.99 - (0.05 * Math.exp(-plasma_glucose_concentration / 10))"
+    }
+  },
+  "render_mode": "svg_2d",
+  "visual_scene": {
+    "theme": "dark_modern_scifi_laboratory",
+    "background": "#0b0f19",
+    "viewBox": "0 0 960 480",
+    "accent_colors": {
+      "primary": "#38bdf8",
+      "secondary": "#f43f5e",
+      "accent": "#34d399",
+      "glow": "rgba(56, 189, 248, 0.35)"
+    },
+    "components": [
+      {
+        "id": "afferent_arteriole",
+        "type": "SVG_path",
+        "description": "Afferent arteriole bringing blood into glomerulus, colored red with oxygenated blood, pulsing to simulate cardiac cycle. Path: M100,240 C120,200 180,200 200,240",
+        "animation": {
+          "property": "strokeDasharray",
+          "values": [
+            "0, 10 10, 0"
+          ],
+          "duration": 1.5,
+          "repeat": -1,
+          "ease": "none"
+        }
+      },
+      {
+        "id": "glomerulus",
+        "type": "SVG_circle",
+        "description": "Glomerular capillary network as a semi-transparent red tuft where filtration occurs. Positioned at center-left, pulsating with net filtration pressure. cx:250, cy:240, r:30",
+        "animation": {
+          "property": "fillOpacity",
+          "values": [
+            0.3,
+            0.6
+          ],
+          "duration": 2,
+          "repeat": -1,
+          "ease": "easeInOut"
+        }
+      },
+      {
+        "id": "efferent_arteriole",
+        "type": "SVG_path",
+        "description": "Efferent arteriole carrying filtered blood away, narrower than afferent, with reduced flow indicating filtration loss. Path: M300,240 C320,280 380,280 400,240",
+        "animation": {
+          "property": "strokeWidth",
+          "values": [
+            3,
+            1.5
+          ],
+          "duration": 3,
+          "repeat": -1,
+          "ease": "easeInOut"
+        }
+      },
+      {
+        "id": "proximal_tubule",
+        "type": "SVG_path",
+        "description": "Proximal convoluted tubule where glucose, amino acids, and sodium are reabsorbed. Zigzag path showing active transport, with glowing highlights tracking reabsorbed substances. Path: M420,200 L440,220 L460,200 L480,220 L500,200 L520,220 L540,200",
+        "animation": {
+          "property": "strokeDasharray",
+          "values": [
+            "0, 5 5, 0"
+          ],
+          "duration": 2,
+          "repeat": -1,
+          "ease": "linear"
+        }
+      },
+      {
+        "id": "collecting_duct",
+        "type": "SVG_path",
+        "description": "Collecting duct transporting final urine to ureter, shown in yellow-green with particle flow indicating urine formation. Path: M560,200 L600,240 L640,200 L680,240",
+        "animation": {
+          "property": "strokeDashoffset",
+          "values": [
+            0,
+            20
+          ],
+          "duration": 3,
+          "repeat": -1,
+          "ease": "linear"
+        }
+      }
+    ]
+  },
+  "gsap_animation_directives": {
+    "engine": "GSAP 3 (gsap)",
+    "lifecycle_rules": [
+      "Use React useRef for SVG/DOM node references",
+      "Use gsap.context() inside useEffect for flawless cleanup on re-render",
+      "Animate dynamic elements using GSAP ticker or timeline with ease: 'none' for continuous motion",
+      "Smoothly tween reactive state transitions using gsap.to() with duration: 0.5"
+    ]
+  },
+  "interactive_controls": [
+    {
+      "id": "slider_gcap",
+      "label": "Glomerular Capillary Pressure",
+      "param": "glomerular_capillary_pressure",
+      "type": "slider",
+      "min": 30,
+      "max": 60,
+      "step": 1,
+      "unit": "mmHg"
+    },
+    {
+      "id": "slider_bcap",
+      "label": "Bowman's Capsule Pressure",
+      "param": "bowmans_capsule_pressure",
+      "type": "slider",
+      "min": 10,
+      "max": 20,
+      "step": 0.5,
+      "unit": "mmHg"
+    },
+    {
+      "id": "slider_gpop",
+      "label": "Glomerular Plasma Oncotic Pressure",
+      "param": "glomerular_plasma_oncotic_pressure",
+      "type": "slider",
+      "min": 15,
+      "max": 35,
+      "step": 1,
+      "unit": "mmHg"
+    },
+    {
+      "id": "slider_kf",
+      "label": "Filtration Coefficient (Kf)",
+      "param": "filtration_coefficient",
+      "type": "slider",
+      "min": 5,
+      "max": 20,
+      "step": 0.5,
+      "unit": "mL/min/mmHg"
+    },
+    {
+      "id": "slider_glucose",
+      "label": "Plasma Glucose Concentration",
+      "param": "plasma_glucose_concentration",
+      "type": "slider",
+      "min": 3,
+      "max": 20,
+      "step": 0.5,
+      "unit": "mM"
+    },
+    {
+      "id": "slider_tm",
+      "label": "Tubular Transport Maximum (Tm)",
+      "param": "tubular_transport_maximum",
+      "type": "slider",
+      "min": 200,
+      "max": 500,
+      "step": 10,
+      "unit": "mg/min"
+    },
+    {
+      "id": "playback_controls",
+      "type": "button_group",
+      "options": [
+        "Play / Pause",
+        "Reset to Defaults"
+      ]
+    }
+  ],
+  "telemetry_metrics": [
+    {
+      "label": "Net Filtration Pressure",
+      "formula": "net_filtration_pressure",
+      "unit": "mmHg"
+    },
+    {
+      "label": "Glomerular Filtration Rate",
+      "formula": "glomerular_filtration_rate",
+      "unit": "mL/min"
+    },
+    {
+      "label": "Filtered Glucose Load",
+      "formula": "filtered_glucose_load",
+      "unit": "mg/min"
+    },
+    {
+      "label": "Glucose Reabsorption Rate",
+      "formula": "glucose_reabsorption_rate",
+      "unit": "mg/min"
+    },
+    {
+      "label": "Glucose Excretion Rate",
+      "formula": "glucose_excretion_rate",
+      "unit": "mg/min"
+    },
+    {
+      "label": "Urine Flow Rate",
+      "formula": "urine_flow_rate",
+      "unit": "mL/min"
+    }
+  ],
+  "pedagogical_callouts": [
+    {
+      "step": 1,
+      "title": "Blood Entry & Filtration",
+      "text": "Blood enters the glomerulus via the afferent arteriole. High glomerular capillary pressure (~45 mmHg) drives plasma filtration through capillary walls into Bowman's capsule, forming primary filtrate."
+    },
+    {
+      "step": 2,
+      "title": "Selective Reabsorption in Tubules",
+      "text": "The filtrate flows into the proximal tubule where glucose, amino acids, sodium, and water are actively reabsorbed back into peritubular capillaries. Glucose reabsorption reaches maximum at high plasma concentrations (Tm effect)."
+    },
+    {
+      "step": 3,
+      "title": "Urine Formation & Excretion",
+      "text": "Remaining fluid and wastes (urea, creatinine, excess ions) continue to the collecting duct. Final urine composition reflects the balance between filtration, reabsorption, and secretion, flowing to the bladder for excretion."
+    }
+  ],
+  "technical_requirements": {
+    "framework": "React 18",
+    "animation_library": "gsap",
+    "styling": "Tailwind CSS utility classes or modern inline styles with dark glassmorphism",
+    "self_contained": true,
+    "component_export": "export default function SimulationComponent()",
+    "no_broken_dependencies": "All icons or helper components should be pure SVG or standard HTML to ensure instant zero-error execution in any preview environment"
+  }
+}
