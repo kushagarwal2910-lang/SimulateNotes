@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
 import { SIMULATIONS_CATALOG, SimulationItem } from "@/lib/simulationsData";
+import { PRESET_SIMULATENOTES } from "@/lib/simulateNotesData";
 import { SourceDocument } from "@/lib/simulateNotesTypes";
+import { getRagCache } from "@/lib/storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,27 +20,33 @@ export async function POST(req: NextRequest) {
     // =========================================================================
     // 1. CHECK IF NOTEBOOK HAS INDEXED SOURCES (DO NOT CRAWL NEW ON QUERY)
     // =========================================================================
-    const projectRoot = process.cwd();
-    const notebookCachePath = notebookId
-      ? path.join(projectRoot, "scratch", "rag_cache", `${notebookId}.json`)
-      : null;
-
-    let cacheData: any = null;
-    let indexedChunks: any[] = [];
+    let cacheData: any = notebookId ? getRagCache(notebookId) : null;
+    let indexedChunks: any[] = cacheData?.chunks && Array.isArray(cacheData.chunks) ? cacheData.chunks : [];
     let availableSources: SourceDocument[] = existingSources || [];
 
-    if (notebookCachePath && fs.existsSync(notebookCachePath)) {
-      try {
-        cacheData = JSON.parse(fs.readFileSync(notebookCachePath, "utf-8"));
-        if (cacheData.chunks && Array.isArray(cacheData.chunks)) {
-          indexedChunks = cacheData.chunks;
-        }
-        if ((!availableSources || availableSources.length === 0) && cacheData.sources) {
-          availableSources = cacheData.sources;
-        }
-      } catch (e) {
-        console.error("Error reading notebook cache:", e);
+    if ((!availableSources || availableSources.length === 0) && cacheData?.sources) {
+      availableSources = cacheData.sources;
+    }
+
+    // Preset fallback if notebookId matches a built-in note
+    const presetMatch = PRESET_SIMULATENOTES.find((p) => p.id === notebookId);
+    if (presetMatch) {
+      if (!availableSources || availableSources.length === 0) {
+        availableSources = presetMatch.sources;
       }
+      if (!cacheData) {
+        cacheData = { simulation: presetMatch.simulation, sources: presetMatch.sources };
+      }
+    }
+
+    // Auto-generate search chunks if sources exist
+    if (indexedChunks.length === 0 && availableSources.length > 0) {
+      indexedChunks = availableSources.map((s, i) => ({
+        chunk_id: `chk_${i}`,
+        title: s.title,
+        text: `${s.title}: ${s.snippet}`,
+        has_math: Boolean(s.snippet.match(/(=|\^|\\sum|\\frac|\\sqrt|\\alpha|\\beta|\\gamma|\\hbar|\\pi)/i)),
+      }));
     }
 
     // If active sources is strictly 0, auto-dispatch the full pipeline (Tavily research + Simulation generation)

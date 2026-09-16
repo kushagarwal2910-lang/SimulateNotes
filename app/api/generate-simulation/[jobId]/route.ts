@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
-import { activeJobs } from "@/lib/jobStore";
+import { getJob } from "@/lib/storage";
 
 export async function GET(
   req: NextRequest,
@@ -14,39 +12,17 @@ export async function GET(
       return NextResponse.json({ error: "jobId is required" }, { status: 400 });
     }
 
-    const projectRoot = process.cwd();
-    const jobDir = path.join(projectRoot, "scratch", "jobs", jobId);
-    const statusFile = path.join(jobDir, "status.json");
+    const jobData = getJob(jobId);
 
-    if (fs.existsSync(statusFile)) {
-      try {
-        const fileContent = fs.readFileSync(statusFile, "utf-8");
-        const statusData = JSON.parse(fileContent);
-
-        return NextResponse.json({
-          jobId,
-          status: statusData.status || "running",
-          step: statusData.step || "",
-          detail: statusData.detail || "",
-          timestamp: statusData.timestamp,
-          simulation: statusData.result?.simulation || null,
-          error: statusData.result?.error || (statusData.status === "error" ? statusData.detail : null),
-        });
-      } catch (readErr) {
-        console.error(`Error reading status file for ${jobId}:`, readErr);
-        // Fall back to activeJobs check
-      }
-    }
-
-    // Check activeJobs map
-    const activeJob = activeJobs.get(jobId);
-    if (activeJob) {
+    if (jobData) {
       return NextResponse.json({
         jobId,
-        status: activeJob.status,
-        step: "running",
-        detail: `Pipeline in progress for: ${activeJob.topic}`,
-        startTime: activeJob.startTime,
+        status: jobData.status || "running",
+        step: jobData.step || "",
+        detail: jobData.detail || "",
+        timestamp: jobData.timestamp,
+        simulation: jobData.result?.simulation || jobData.simulation || null,
+        error: jobData.result?.error || (jobData.status === "error" ? jobData.detail : null),
       });
     }
 

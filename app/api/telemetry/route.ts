@@ -49,9 +49,10 @@ const AVAILABLE_MODELS = [
   }
 ];
 
+import { getStoragePath, safeReadJson, safeWriteJson } from "@/lib/storage";
+
 function getTelemetryFilePath() {
-  const projectRoot = process.cwd();
-  return path.join(projectRoot, "scratch", "telemetry.json");
+  return getStoragePath("telemetry.json");
 }
 
 function maskKey(key?: string): string {
@@ -79,17 +80,7 @@ function readTelemetryData() {
     last_updated: Date.now() / 1000,
   };
 
-  if (!fs.existsSync(filePath)) {
-    return defaultData;
-  }
-
-  try {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    const parsed = JSON.parse(raw);
-    return { ...defaultData, ...parsed };
-  } catch (err) {
-    return defaultData;
-  }
+  return safeReadJson(filePath, defaultData);
 }
 
 export async function GET() {
@@ -249,8 +240,7 @@ export async function POST(req: NextRequest) {
       }
 
       current.last_updated = Date.now() / 1000;
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(current, null, 2), "utf-8");
+      safeWriteJson(filePath, current);
 
       return NextResponse.json({
         status: "success",
@@ -275,8 +265,7 @@ export async function POST(req: NextRequest) {
       }
       current.last_updated = Date.now() / 1000;
 
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(current, null, 2), "utf-8");
+      safeWriteJson(filePath, current);
 
       process.env.OPENROUTER_MODEL = modelId;
 

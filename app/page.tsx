@@ -33,9 +33,25 @@ export default function App() {
   // Studio iframe ref for programmatic voice control
   const studioIframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Load all user-generated and preset notes from /api/notes
+  // Load notes from localStorage for instant 0ms load, then sync with /api/notes
   useEffect(() => {
     const loadNotes = async () => {
+      // 1. Instant local cache restore
+      try {
+        const cached = localStorage.getItem("simulatenotes_user_notes");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setNotebooks((prev) => {
+              const currentIds = new Set(prev.map((n) => n.id));
+              const newCustom = parsed.filter((n: any) => !currentIds.has(n.id));
+              return [...newCustom, ...prev];
+            });
+          }
+        }
+      } catch {}
+
+      // 2. Fetch server notes
       try {
         const res = await fetch("/api/notes");
         if (res.ok) {
@@ -51,9 +67,16 @@ export default function App() {
     loadNotes();
   }, []);
 
-  // Helper to persist note changes to server disk
+  // Helper to persist note changes to server and local storage
   const saveNoteToDisk = async (note: SimulateNote) => {
     try {
+      try {
+        const cached = localStorage.getItem("simulatenotes_user_notes");
+        const list: SimulateNote[] = cached ? JSON.parse(cached) : [];
+        const filtered = list.filter((n) => n.id !== note.id);
+        localStorage.setItem("simulatenotes_user_notes", JSON.stringify([note, ...filtered]));
+      } catch {}
+
       await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,12 +87,20 @@ export default function App() {
     }
   };
 
-  // Delete note permanently from state and server
+  // Delete note permanently from state, localStorage, and server
   const handleDeleteNotebook = async (notebookId: string) => {
     setNotebooks((prev) => prev.filter((nb) => nb.id !== notebookId));
     if (activeNotebookId === notebookId) {
       setActiveNotebookId(null);
     }
+    try {
+      const cached = localStorage.getItem("simulatenotes_user_notes");
+      if (cached) {
+        const list: SimulateNote[] = JSON.parse(cached);
+        localStorage.setItem("simulatenotes_user_notes", JSON.stringify(list.filter((n) => n.id !== notebookId)));
+      }
+    } catch {}
+
     try {
       await fetch(`/api/notes?id=${notebookId}`, { method: "DELETE" });
     } catch (err) {

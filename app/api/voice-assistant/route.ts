@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import { getRagCache } from "@/lib/storage";
+import { PRESET_SIMULATENOTES } from "@/lib/simulateNotesData";
 
 /**
  * Retrieves the pool of OpenRouter API keys from environment variables.
@@ -43,8 +45,7 @@ function cleanForSpeech(raw: string): string {
     .replace(/\\Delta/g, "delta ")
     .replace(/\\pi/g, "pi")
     .replace(/[•\-\*]\s+/g, "") // Bullet markers
-    .replace(/\s*\n\s*/g, " ") // Collapse newlines into speech pauses
-    .replace(/\s{2,}/g, " ") // Collapse multiple spaces
+    .replace(/\n+/g, " ") // Single line
     .trim();
 }
 
@@ -59,17 +60,14 @@ function retrieveRAGContext(
   notebookTitle?: string,
   providedSources?: any[]
 ): { topic: string; snippets: string[] } {
-  const ragDir = path.join(projectRoot, "scratch", "rag_cache");
   let cacheData: any = null;
 
-  // 1. Strictly look for THIS specific notebook's cache file on disk
   if (notebookId) {
-    const specificPath = path.join(ragDir, `${notebookId}.json`);
-    if (fs.existsSync(specificPath)) {
-      try {
-        cacheData = JSON.parse(fs.readFileSync(specificPath, "utf-8"));
-      } catch (e) {
-        console.warn("Could not parse notebook cache for", notebookId, e);
+    cacheData = getRagCache(notebookId);
+    if (!cacheData) {
+      const preset = PRESET_SIMULATENOTES.find((p) => p.id === notebookId);
+      if (preset) {
+        cacheData = { topic: preset.title, sources: preset.sources, simulation: preset.simulation };
       }
     }
   }

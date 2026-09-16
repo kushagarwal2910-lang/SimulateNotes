@@ -4,6 +4,8 @@ import fs from "fs";
 import { SourceDocument } from "@/lib/simulateNotesTypes";
 import { SIMULATIONS_CATALOG } from "@/lib/simulationsData";
 
+import { getRagCache, saveRagCache } from "@/lib/storage";
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -13,24 +15,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "notebookId is required" }, { status: 400 });
     }
 
-    const projectRoot = process.cwd();
-    const ragCacheDir = path.join(projectRoot, "scratch", "rag_cache");
-    fs.mkdirSync(ragCacheDir, { recursive: true });
-    const notebookCachePath = path.join(ragCacheDir, `${notebookId}.json`);
-
     // Load existing indexed sources/chunks if any
+    const existingCache = getRagCache(notebookId);
     let existingData: { sources: SourceDocument[]; chunks: any[] } = {
-      sources: [],
-      chunks: [],
+      sources: existingCache?.sources || [],
+      chunks: existingCache?.chunks || [],
     };
-
-    if (fs.existsSync(notebookCachePath)) {
-      try {
-        existingData = JSON.parse(fs.readFileSync(notebookCachePath, "utf-8"));
-      } catch (e) {
-        console.error("Error reading existing cache for notebook:", notebookId, e);
-      }
-    }
 
     let newSources: SourceDocument[] = [];
     let newChunks: any[] = [];
@@ -194,20 +184,13 @@ export async function POST(req: NextRequest) {
     ];
     const mergedChunks = [...newChunks, ...existingData.chunks];
 
-    fs.writeFileSync(
-      notebookCachePath,
-      JSON.stringify(
-        {
-          notebookId,
-          topic: topicTitle,
-          updatedAt: Date.now(),
-          sources: mergedSources,
-          chunks: mergedChunks,
-        },
-        null,
-        2
-      )
-    );
+    saveRagCache(notebookId, {
+      notebookId,
+      topic: topicTitle,
+      updatedAt: Date.now(),
+      sources: mergedSources,
+      chunks: mergedChunks,
+    });
 
     return NextResponse.json({
       status: "success",
