@@ -60,15 +60,18 @@ export async function POST(req: NextRequest) {
         timestamp: Date.now() / 1000,
       });
 
-      // Launch simulation in background
-      generateSimulation(query, jobId, (step, detail) => {
-        setJob(jobId, {
-          status: "running",
-          step,
-          detail,
-          timestamp: Date.now() / 1000,
+      // Synchronously generate simulation for serverless consistency
+      let simulation: any = null;
+      try {
+        simulation = await generateSimulation(query, jobId, (step, detail) => {
+          setJob(jobId, {
+            status: "running",
+            step,
+            detail,
+            timestamp: Date.now() / 1000,
+          });
         });
-      }).then((simulation) => {
+
         setJob(jobId, {
           status: "completed",
           step: "completed",
@@ -77,14 +80,16 @@ export async function POST(req: NextRequest) {
           result: { simulation },
           simulation,
         });
-      }).catch(console.error);
+      } catch (e) {
+        console.error("Simulation error in empty-sources handler:", e);
+      }
 
       return NextResponse.json({
         status: "success",
         query,
-        answer: `I'm autonomously researching technical literature for **"${query}"** via Tavily, extracting the mathematical model and physical equations, and compiling the 60 FPS interactive simulation in the Studio.\n\n• **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG blueprints into a verified JSON prompt.\n• **Agent 2 (Simulation Engine)**: Compiling React 18 + GSAP simulation code, running Babel AST check, and self-healing.\n\n⏳ **Follow real-time compilation in the Studio panel on the right!**`,
+        answer: `I've formulated the physical model and equations for **"${query}"** and compiled the 60 FPS interactive simulation in the Studio.\n\n• **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG blueprints into a verified JSON prompt.\n• **Agent 2 (Simulation Engine)**: Compiling React 18 + GSAP simulation code, running Babel AST check, and self-healing.\n\n✨ **Interact with real-time controls and observation metrics in the Studio panel on the right!**`,
         sources: [],
-        simulation: null,
+        simulation,
         dynamicGeneration: true,
         generationJobId: jobId,
       });
@@ -292,10 +297,7 @@ export async function POST(req: NextRequest) {
       });
 
       try {
-        generatedSimulation = await Promise.race([
-          simPromise,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-        ]);
+        generatedSimulation = await simPromise;
       } catch (err) {
         console.error("Simulation generation error in rag-agent:", err);
       }

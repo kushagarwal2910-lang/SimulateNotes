@@ -447,8 +447,8 @@ export async function generateSimulation(
     duration: "Interactive",
     date: "Today",
     description: `Interactive scientific simulation exploring physical laws, mathematical relationships, and real-time state transitions for ${cleanTitle}.`,
-    previewUrl: `/api/simulations/preview?id=${simId}`,
-    jsxUrl: `/api/simulations/preview?id=${simId}`,
+    previewUrl: `/api/simulations/preview?id=${simId}&title=${encodeURIComponent(cleanTitle)}`,
+    jsxUrl: `/api/simulations/preview?id=${simId}&title=${encodeURIComponent(cleanTitle)}`,
     promptFile: "",
     equations,
     keyParameters: [

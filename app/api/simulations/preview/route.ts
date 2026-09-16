@@ -253,6 +253,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const id = searchParams.get("id") || searchParams.get("slug");
+    const queryTitle = searchParams.get("title");
 
     if (!id) {
       return NextResponse.redirect(new URL("/simulations/quantum_tunneling_barrier/preview.html", req.url));
@@ -274,10 +275,10 @@ export async function GET(req: NextRequest) {
     if (stored) {
       code = stored.code;
       componentName = stored.metadata?.componentName || "Simulation";
-      title = stored.metadata?.simulation?.title || "Interactive Simulation";
+      title = stored.metadata?.simulation?.title || queryTitle || "Interactive Simulation";
     } else {
       // Fallback: generate procedural simulation for this id/topic
-      const fallbackTitle = catalogMatch ? catalogMatch.title : id.replace(/^(dyn_|job_)/, "").replace(/_/g, " ");
+      const fallbackTitle = queryTitle || (catalogMatch ? catalogMatch.title : id.replace(/^(dyn_|job_|\d+_)+/, "").replace(/_/g, " ")) || "Interactive Simulation";
       componentName = "GeneratedSimulation";
       code = generateProceduralFallback(fallbackTitle, componentName);
       title = fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1);
