@@ -7,6 +7,63 @@ import { SourceDocument } from "@/lib/simulateNotesTypes";
 import { getRagCache, setJob } from "@/lib/storage";
 import { generateSimulation } from "@/lib/simulationGenerator";
 
+function findCatalogMatch(query: string): SimulationItem | undefined {
+  const cleanQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
+  const queryTokens = cleanQuery.split(/\s+/).filter((t: string) => t.length > 2 && !['simulate', 'simulation', 'generate', 'model', 'show', 'create', 'build', 'please', 'with', 'about', 'the'].includes(t));
+
+  let bestMatch: SimulationItem | undefined;
+  let highestScore = 0;
+
+  for (const item of SIMULATIONS_CATALOG) {
+    let score = 0;
+    const titleLower = item.title.toLowerCase();
+    const slugLower = item.slug.toLowerCase().replace(/_/g, " ");
+    const descLower = item.description.toLowerCase();
+
+    // Exact or strong phrase match
+    if (cleanQuery.includes(titleLower) || cleanQuery.includes(slugLower)) {
+      score += 25;
+    }
+
+    // Specific domain keywords
+    for (const token of queryTokens) {
+      if (titleLower.includes(token)) score += 5;
+      if (slugLower.includes(token)) score += 5;
+      if (descLower.includes(token)) score += 1;
+    }
+
+    // Specific simulation keyword boosts
+    if (item.slug === "doppler_effect_sound_source_motion" && (cleanQuery.includes("doppler") || cleanQuery.includes("frequency shift"))) score += 20;
+    if (item.slug === "photoelectric_effect_simulation" && (cleanQuery.includes("photoelectric") || cleanQuery.includes("work function"))) score += 20;
+    if (item.slug === "hydraulic_press_pascal_dynamics" && (cleanQuery.includes("hydraulic") || cleanQuery.includes("pascal"))) score += 20;
+    if (item.slug === "rocket_propulsion_system" && (cleanQuery.includes("rocket propulsion") || cleanQuery.includes("tsiolkovsky"))) score += 20;
+    if (item.slug === "rocket_ascent_multistage" && (cleanQuery.includes("multistage") || cleanQuery.includes("rocket ascent") || cleanQuery.includes("staging"))) score += 20;
+    if (item.slug === "steam_turbine_engine" && (cleanQuery.includes("steam turbine") || cleanQuery.includes("rankine"))) score += 20;
+    if (item.slug === "sim_simulate_centrifugal_pump_impell" && (cleanQuery.includes("centrifugal pump") || cleanQuery.includes("impeller"))) score += 20;
+    if (item.slug === "integration_area_under_curve" && (cleanQuery.includes("riemann") || cleanQuery.includes("calculus integration") || cleanQuery.includes("definite integral"))) score += 20;
+    if (item.slug === "crude_oil_distillation" && (cleanQuery.includes("crude oil") || cleanQuery.includes("fractional distillation") || cleanQuery.includes("petroleum"))) score += 20;
+    if (item.slug === "gravitational_orbit_mechanics" && (cleanQuery.includes("orbit") || cleanQuery.includes("kepler") || cleanQuery.includes("vis-viva") || cleanQuery.includes("gravity well"))) score += 20;
+    if (item.slug === "bernoulli" && (cleanQuery.includes("bernoulli") || cleanQuery.includes("venturi"))) score += 20;
+    if (item.slug === "lithium_ion_battery_dynamics" && (cleanQuery.includes("battery") || cleanQuery.includes("lithium") || cleanQuery.includes("butler volmer"))) score += 20;
+    if (item.slug === "neuroscience_stress_brain_anatomy" && (cleanQuery.includes("neuroscience") || cleanQuery.includes("hpa axis") || cleanQuery.includes("brain") || cleanQuery.includes("amygdala"))) score += 20;
+    if (item.slug === "usb_flash_nand_memory" && (cleanQuery.includes("nand") || cleanQuery.includes("floating gate") || cleanQuery.includes("flash memory"))) score += 20;
+    if (item.slug === "quantum_tunneling_barrier" && (cleanQuery.includes("quantum tunneling") || cleanQuery.includes("tunneling barrier"))) score += 20;
+    if (item.slug === "bayes_theorem_conditional_probability" && (cleanQuery.includes("bayes") || cleanQuery.includes("conditional probability"))) score += 20;
+    if (item.slug === "human_kidney_nephron_function" && (cleanQuery.includes("kidney") || cleanQuery.includes("nephron") || cleanQuery.includes("renal"))) score += 20;
+    if (item.slug === "stomach_acid_digestion" && (cleanQuery.includes("stomach") || cleanQuery.includes("gastric") || cleanQuery.includes("pepsin"))) score += 20;
+    if (item.slug === "earth_gravity_tunnel" && (cleanQuery.includes("gravity tunnel") || cleanQuery.includes("earth tunnel"))) score += 20;
+    if (item.slug === "butterfly_life_cycle_simulation" && (cleanQuery.includes("butterfly") || cleanQuery.includes("metamorphosis") || cleanQuery.includes("chrysalis"))) score += 20;
+    if (item.slug === "paper_factory_fourdrinier" && (cleanQuery.includes("paper factory") || cleanQuery.includes("pulp") || cleanQuery.includes("fourdrinier"))) score += 20;
+
+    if (score > highestScore && score >= 10) {
+      highestScore = score;
+      bestMatch = item;
+    }
+  }
+
+  return bestMatch;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -50,8 +107,20 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    // If active sources is strictly 0, auto-dispatch the full pipeline (Tavily research + Simulation generation)
+    // If active sources is strictly 0, check catalog first before dispatching dual-agent generation
     if (availableSources.length === 0 && indexedChunks.length === 0) {
+      const catalogDirect = findCatalogMatch(query);
+      if (catalogDirect) {
+        return NextResponse.json({
+          status: "success",
+          query,
+          answer: `Loaded pre-compiled 60 FPS scientific simulation for **"${catalogDirect.title}"** from the knowledge catalog.\n\n### Key Governing Principles & Equations:\n${catalogDirect.equations.map((eq) => `• \`${eq}\``).join("\n")}\n\n### Experimental Parameters:\n• **Primary Controls**: ${catalogDirect.keyParameters.map((p) => `**${p.name}** (\`${p.value} ${p.unit}\`)`).join(", ")}.\n• **Accuracy**: 60 FPS verified numerical solver.\n\n✨ **Interact with real-time controls in the Studio panel on the right!**`,
+          sources: [],
+          simulation: catalogDirect,
+          dynamicGeneration: false,
+        });
+      }
+
       const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       setJob(jobId, {
         status: "running",
@@ -138,91 +207,7 @@ export async function POST(req: NextRequest) {
     // =========================================================================
     // 3. MATCH RELEVANT SIMULATION FROM PRE-BUILT CATALOG (IF APPLICABLE)
     // =========================================================================
-    let matchedSim: SimulationItem | undefined;
-
-    const hasWord = (word: string) => new RegExp(`\\b${word}\\b`, "i").test(lowerQuery);
-    const hasPhrase = (phrase: string) => lowerQuery.includes(phrase);
-
-    if (
-      hasPhrase("crude oil") ||
-      hasPhrase("fractional distillation") ||
-      hasPhrase("oil distillation") ||
-      hasWord("petroleum")
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "crude_oil_distillation");
-    } else if (
-      hasPhrase("keplerian") ||
-      hasPhrase("vis-viva") ||
-      hasPhrase("orbital mechanics") ||
-      hasPhrase("gravity well") ||
-      (hasWord("orbit") && (hasWord("gravity") || hasWord("kepler")))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "gravitational_orbit_mechanics");
-    } else if (
-      hasWord("bernoulli") ||
-      hasPhrase("venturi") ||
-      (hasPhrase("fluid dynamics") && (hasWord("pressure") || hasWord("velocity")))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "bernoulli");
-    } else if (
-      hasPhrase("lithium ion") ||
-      hasPhrase("lithium-ion") ||
-      hasPhrase("butler-volmer") ||
-      hasPhrase("battery dynamics")
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "lithium_ion_battery_dynamics");
-    } else if (
-      hasPhrase("neuroscience") ||
-      hasPhrase("hpa axis") ||
-      hasPhrase("brain anatomy") ||
-      hasWord("amygdala")
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "neuroscience_stress_brain_anatomy");
-    } else if (
-      hasPhrase("nand flash") ||
-      hasPhrase("floating gate") ||
-      hasPhrase("nand memory") ||
-      (hasPhrase("flash memory") && hasWord("tunneling"))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "usb_flash_nand_memory");
-    } else if (
-      hasPhrase("quantum tunneling") ||
-      hasPhrase("evanescent decay") ||
-      (hasWord("tunneling") && (hasWord("barrier") || hasWord("wavepacket")))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "quantum_tunneling_barrier");
-    } else if (
-      hasWord("bayes") ||
-      hasPhrase("bayes theorem") ||
-      hasPhrase("bayesian") ||
-      (hasWord("conditional") && hasWord("probability"))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "bayes_theorem_conditional_probability");
-    } else if (
-      hasPhrase("kidney") ||
-      hasPhrase("renal") ||
-      hasPhrase("nephron") ||
-      hasPhrase("glomerular") ||
-      hasWord("kidneys")
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "human_kidney_nephron_function");
-    } else if (
-      hasPhrase("stomach") ||
-      hasPhrase("gastric") ||
-      hasPhrase("pepsin") ||
-      (hasWord("acid") && hasWord("digest")) ||
-      (hasWord("stomach") && hasWord("acid"))
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "stomach_acid_digestion");
-    } else if (
-      hasPhrase("gravity tunnel") ||
-      hasPhrase("earth gravity tunnel")
-    ) {
-      matchedSim = SIMULATIONS_CATALOG.find((s) => s.slug === "earth_gravity_tunnel");
-    }
-
-    // Determine whether user wants to create a new simulation or ask about existing one
-    const isExplicitSimulation = /\b(simulate|simulation|generate|create|model|build|make|visualize|new|solve)\b/i.test(query);
+    let matchedSim: SimulationItem | undefined = findCatalogMatch(query);
 
     let matchesExistingTopic = false;
     if (cacheData && cacheData.simulation) {
@@ -234,10 +219,7 @@ export async function POST(req: NextRequest) {
       matchesExistingTopic = simTitleWords.some((w: string) => lowerQuery.includes(w));
     }
 
-    // If the user explicitly asks to simulate, model, create, or build something, ALWAYS generate dynamic simulation!
-    if (isExplicitSimulation) {
-      matchedSim = undefined;
-    } else if (!matchedSim && cacheData && cacheData.simulation && matchesExistingTopic) {
+    if (!matchedSim && cacheData && cacheData.simulation && matchesExistingTopic) {
       // Only preserve existing simulation if the query is an explanatory follow-up about that specific topic
       matchedSim = cacheData.simulation;
     }

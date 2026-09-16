@@ -177,12 +177,126 @@ export const SimulationSandboxWindow: React.FC<SimulationSandboxWindowProps> = (
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(
-      `// React 18 + GSAP Simulation: ${simulation.title}\n// Source: ${simulation.jsxUrl}`
-    );
+    const codeToCopy = simulation.code
+      ? simulation.code
+      : `// React 18 + GSAP Simulation: ${simulation.title}\n// Source: ${simulation.jsxUrl}`;
+    navigator.clipboard.writeText(codeToCopy);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
+
+  const simulationSrcDoc = simulation.code
+    ? `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${simulation.title.replace(/</g, "&lt;")} - SimulateNotes Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #e2e8f0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="error-container"></div>
+  <script>
+    function cleanJsxClient(c) {
+      if (!c) return "";
+      let r = c;
+      r = r.replace(/^import\\s+[\\s\\S]*?from\\s+['"][^'"]*['"];?\\s*$/gm, "");
+      r = r.replace(/^import\\s+['"][^'"]*['"];?\\s*$/gm, "");
+      r = r.replace(/export\\s+default\\s+function/g, "function");
+      r = r.replace(/export\\s+function/g, "function");
+      r = r.replace(/export\\s+default\\s+/g, "");
+      r = r.replace(/\\\\frac\\{([^}]+)\\}\\{([^}]+)\\}/g, "($1)/($2)");
+      r = r.replace(/\\\\mathbf\\{([^}]+)\\}/g, "$1");
+      r = r.replace(/\\\\partial/g, "∂");
+      r = r.replace(/\\\\nabla/g, "∇");
+      r = r.replace(/\\\\alpha/g, "α");
+      r = r.replace(/\\\\beta/g, "β");
+      r = r.replace(/\\\\gamma/g, "γ");
+      r = r.replace(/\\\\delta/g, "δ");
+      r = r.replace(/\\\\theta/g, "θ");
+      r = r.replace(/\\\\omega/g, "ω");
+      r = r.replace(/\\\\lambda/g, "λ");
+      r = r.replace(/\\\\times/g, "×");
+      r = r.replace(/\\\\cdot/g, "·");
+      r = r.replace(/\\\\pm/g, "±");
+      r = r.replace(/\\\\approx/g, "≈");
+      r = r.replace(/\\\\([a-zA-Z_])/g, "$1");
+      r = r.replace(/<br\\s*>/gi, "<br />");
+      r = r.replace(/<hr\\s*>/gi, "<hr />");
+      r = r.replace(/(\\s)class=/g, "$1className=");
+      r = r.replace(/(\\s)for=/g, "$1htmlFor=");
+      r = r.replace(/<!--([\\s\\S]*?)-->/g, "{/* $1 */}");
+      return r;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const rawCode = ${JSON.stringify(simulation.code)};
+      const cleaned = cleanJsxClient(rawCode);
+
+      const ErrorBoundary = class extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { hasError: false, error: null };
+        }
+        static getDerivedStateFromError(err) {
+          return { hasError: true, error: err };
+        }
+        componentDidCatch(err, info) {
+          console.error("Simulation runtime error:", err, info);
+        }
+        render() {
+          if (this.state.hasError) {
+            return React.createElement('div', {
+              style: { padding: 24, color: '#f87171', background: '#1e1e2e', borderRadius: 8, fontFamily: 'monospace' }
+            }, '⚠️ Simulation Render Error: ' + (this.state.error?.message || 'Unknown error'));
+          }
+          return this.props.children;
+        }
+      };
+
+      try {
+        const compiled = Babel.transform(cleaned, { presets: [['react', { runtime: 'classic' }]] }).code;
+        const nameMatch = cleaned.match(/function\\s+([A-Z][a-zA-Z0-9_]*)/);
+        const compName = nameMatch ? nameMatch[1] : "GeneratedSimulation";
+
+        const runner = new Function(
+          'React', 'ReactDOM', 'gsap', 'THREE', 'ErrorBoundary',
+          'const { useState, useEffect, useRef, useMemo, useCallback } = React;\\n' +
+          compiled +
+          '\\nReactDOM.createRoot(document.getElementById("root")).render(' +
+          'React.createElement(ErrorBoundary, null, React.createElement(' + compName + '))' +
+          ');'
+        );
+        runner(window.React, window.ReactDOM, window.gsap, window.THREE, ErrorBoundary);
+      } catch (err) {
+        console.error("Babel compilation error:", err);
+        const errDiv = document.getElementById("error-container");
+        if (errDiv) {
+          errDiv.innerHTML = '<div style="padding: 24px; color: #f87171; background: #1e1e2e; border: 1px solid #ef4444; border-radius: 8px; font-family: monospace;"><h3>⚠️ Simulation Syntax Notice</h3><p>' + err.message + '</p></div>';
+        }
+      }
+    });
+  </script>
+</body>
+</html>`
+    : undefined;
 
   return (
     <div className="w-full h-full flex flex-col bg-black border-l border-[#1c1c1c] select-none overflow-hidden">
@@ -287,7 +401,8 @@ export const SimulationSandboxWindow: React.FC<SimulationSandboxWindowProps> = (
             <iframe
               ref={iframeRef}
               key={iframeKey}
-              src={simulation.previewUrl}
+              src={simulationSrcDoc ? undefined : simulation.previewUrl}
+              srcDoc={simulationSrcDoc}
               className="w-full h-full border-0 block bg-black"
               title={simulation.title}
               sandbox="allow-scripts allow-same-origin"
@@ -346,17 +461,17 @@ export const SimulationSandboxWindow: React.FC<SimulationSandboxWindowProps> = (
         {activeTab === "code" && (
           <div className="h-full overflow-y-auto p-4 font-mono text-xs text-neutral-300 space-y-3">
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-              <span>Component Source: {simulation.jsxUrl}</span>
+              <span>Component Source: {simulation.jsxUrl || "Dynamic Generator"}</span>
               <button
                 onClick={handleCopyCode}
                 className="flex items-center gap-1 text-white hover:underline text-xs"
               >
                 {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedCode ? "Copied" : "Copy"}</span>
+                <span>{copiedCode ? "Copied" : "Copy Code"}</span>
               </button>
             </div>
             <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-300 overflow-x-auto text-[11px] leading-relaxed">
-              <pre>{`// Component: ${simulation.title}
+              <pre>{simulation.code || `// Component: ${simulation.title}
 // Generated via LangGraph Simulation Agent (Agent 2)
 // Architecture: React 18 + GSAP 3 Physics Stage
 
@@ -383,3 +498,4 @@ export function Simulation() {
     </div>
   );
 };
+
