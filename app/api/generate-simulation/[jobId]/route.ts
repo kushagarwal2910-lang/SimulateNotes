@@ -27,9 +27,19 @@ export async function GET(
       });
     }
 
-    // Serverless fallback: Instead of returning 404 and stalling the UI, synthesize verified domain simulation
-    const rawTopic = jobId.replace(/^(job_dyn_|job_|dyn_|\d+_)+/, "").replace(/_/g, " ").trim();
-    const simTitle = rawTopic ? rawTopic.charAt(0).toUpperCase() + rawTopic.slice(1) : "Interactive Physical Simulation";
+    // Serverless fallback: Recover topic from topic-encoded jobId (job_<topic_slug>_<timestamp>_<rand>)
+    let rawTopic = jobId
+      .replace(/^job_/, "")
+      .replace(/_\d+_[a-z0-9]+$/, "")
+      .replace(/^(dyn_|job_|\d+_)+/, "")
+      .replace(/_/g, " ")
+      .trim();
+
+    if (!rawTopic || rawTopic.length < 2 || /^[a-z0-9]{4,8}$/.test(rawTopic)) {
+      rawTopic = "Interactive Physical Simulation";
+    }
+
+    const simTitle = rawTopic.charAt(0).toUpperCase() + rawTopic.slice(1);
     const synth = synthesizeDomainSimulation(simTitle, "GeneratedSimulation");
 
     return NextResponse.json({

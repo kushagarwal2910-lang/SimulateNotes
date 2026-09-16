@@ -60,9 +60,17 @@ function cleanJsxCode(raw: string): { code: string; componentName: string } {
   // Remove any remaining raw backslashes before characters to prevent Unicode escape syntax errors
   cleaned = cleaned.replace(/\\([a-zA-Z_])/g, "$1");
 
-  // Auto-close simple void HTML tags
+  // Remove React. prefix from hooks
+  cleaned = cleaned.replace(/React\.(useState|useEffect|useRef|useMemo|useCallback)/g, "$1");
+
+  // Normalize arrow component functions: const Sim = () => to function Sim()
+  cleaned = cleaned.replace(/const\s+([A-Z][a-zA-Z0-9_]*)\s*=\s*(?:\([^)]*\)|[a-zA-Z0-9_]+)\s*=>/g, "function $1()");
+
+  // Auto-close void tags if LLM omitted self-closing slash
   cleaned = cleaned.replace(/<br\s*>/gi, "<br />");
   cleaned = cleaned.replace(/<hr\s*>/gi, "<hr />");
+  cleaned = cleaned.replace(/<input((?:[^>](?!\/))*?)>/gi, "<input$1 />");
+  cleaned = cleaned.replace(/<img((?:[^>](?!\/))*?)>/gi, "<img$1 />");
 
   // Fix HTML attribute names to JSX
   cleaned = cleaned.replace(/(\s)class=/g, "$1className=");
@@ -140,9 +148,9 @@ export async function generateSimulation(
   const { systemPrompt, userPrompt } = buildPrompt(topic);
   const keys = getOpenRouterKeys();
   const candidateModels = [
-    "meta-llama/llama-3.3-70b-instruct",
-    "qwen/qwen-2.5-coder-32b-instruct",
+    "meta-llama/llama-3.1-8b-instruct",
     "mistralai/mistral-small-24b-instruct-2501",
+    "qwen/qwen-2.5-coder-32b-instruct",
   ];
 
   let rawCode: string | null = null;
@@ -168,16 +176,16 @@ export async function generateSimulation(
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt },
               ],
-              temperature: 0.35,
-              max_tokens: 2500,
+              temperature: 0.25,
+              max_tokens: 2200,
             }),
-            signal: AbortSignal.timeout(35000),
+            signal: AbortSignal.timeout(22000),
           });
 
           if (resp.ok) {
             const data = await resp.json();
             const content = data.choices?.[0]?.message?.content?.trim();
-            if (content && content.length > 500 && content.includes("function")) {
+            if (content && content.length > 300 && (content.includes("function") || content.includes("return"))) {
               rawCode = content;
               break;
             }
@@ -202,12 +210,12 @@ export async function generateSimulation(
   if (rawCode) {
     const cleaned = cleanJsxCode(rawCode);
     finalCode = cleaned.code;
-    resolvedComponentName = cleaned.componentName;
+    resolvedComponentName = cleaned.componentName || "Simulation";
     const domainFallback = synthesizeDomainSimulation(cleanTitle, resolvedComponentName);
     category = domainFallback.category;
     equations = domainFallback.equations;
     keyParameters = domainFallback.parameters;
-    description = domainFallback.description;
+    description = `Interactive 60 FPS visual simulation modeling dynamical equations and state transitions for ${cleanTitle}.`;
   } else {
     // Topic-Aware Domain Physics Engine
     resolvedComponentName = componentName.length > 3 ? componentName : "GeneratedSimulation";

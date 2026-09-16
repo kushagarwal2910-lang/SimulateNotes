@@ -104,7 +104,13 @@ export async function GET(req: NextRequest) {
         title = stored.metadata?.simulation?.title || queryTitle || "Interactive Simulation";
       } else {
         // Fallback: domain-aware physics synthesis for this id/topic
-        const fallbackTitle = queryTitle || (catalogMatch ? catalogMatch.title : id.replace(/^(dyn_|job_|\d+_)+/, "").replace(/_/g, " ")) || "Interactive Simulation";
+        const parsedTopic = id
+          .replace(/^(dyn_|job_)/, "")
+          .replace(/_\d+_[a-z0-9]+$/, "")
+          .replace(/^(dyn_|job_|\d+_)+/, "")
+          .replace(/_/g, " ")
+          .trim();
+        const fallbackTitle = queryTitle || (catalogMatch ? catalogMatch.title : (parsedTopic || "Interactive Simulation"));
         componentName = "GeneratedSimulation";
         const synth = synthesizeDomainSimulation(fallbackTitle, componentName);
         code = synth.code;

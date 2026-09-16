@@ -7,61 +7,9 @@ import { SourceDocument } from "@/lib/simulateNotesTypes";
 import { getRagCache, setJob } from "@/lib/storage";
 import { generateSimulation } from "@/lib/simulationGenerator";
 
-function findCatalogMatch(query: string): SimulationItem | undefined {
-  const cleanQuery = query.toLowerCase().replace(/[^a-z0-9\s]/g, " ");
-  const queryTokens = cleanQuery.split(/\s+/).filter((t: string) => t.length > 2 && !['simulate', 'simulation', 'generate', 'model', 'show', 'create', 'build', 'please', 'with', 'about', 'the'].includes(t));
-
-  let bestMatch: SimulationItem | undefined;
-  let highestScore = 0;
-
-  for (const item of SIMULATIONS_CATALOG) {
-    let score = 0;
-    const titleLower = item.title.toLowerCase();
-    const slugLower = item.slug.toLowerCase().replace(/_/g, " ");
-    const descLower = item.description.toLowerCase();
-
-    // Exact or strong phrase match
-    if (cleanQuery.includes(titleLower) || cleanQuery.includes(slugLower)) {
-      score += 25;
-    }
-
-    // Specific domain keywords
-    for (const token of queryTokens) {
-      if (titleLower.includes(token)) score += 5;
-      if (slugLower.includes(token)) score += 5;
-      if (descLower.includes(token)) score += 1;
-    }
-
-    // Specific simulation keyword boosts
-    if (item.slug === "doppler_effect_sound_source_motion" && (cleanQuery.includes("doppler") || cleanQuery.includes("frequency shift"))) score += 20;
-    if (item.slug === "photoelectric_effect_simulation" && (cleanQuery.includes("photoelectric") || cleanQuery.includes("work function"))) score += 20;
-    if (item.slug === "hydraulic_press_pascal_dynamics" && (cleanQuery.includes("hydraulic") || cleanQuery.includes("pascal"))) score += 20;
-    if (item.slug === "rocket_propulsion_system" && (cleanQuery.includes("rocket propulsion") || cleanQuery.includes("tsiolkovsky"))) score += 20;
-    if (item.slug === "rocket_ascent_multistage" && (cleanQuery.includes("multistage") || cleanQuery.includes("rocket ascent") || cleanQuery.includes("staging"))) score += 20;
-    if (item.slug === "steam_turbine_engine" && (cleanQuery.includes("steam turbine") || cleanQuery.includes("rankine"))) score += 20;
-    if (item.slug === "sim_simulate_centrifugal_pump_impell" && (cleanQuery.includes("centrifugal pump") || cleanQuery.includes("impeller"))) score += 20;
-    if (item.slug === "integration_area_under_curve" && (cleanQuery.includes("riemann") || cleanQuery.includes("calculus integration") || cleanQuery.includes("definite integral"))) score += 20;
-    if (item.slug === "crude_oil_distillation" && (cleanQuery.includes("crude oil") || cleanQuery.includes("fractional distillation") || cleanQuery.includes("petroleum"))) score += 20;
-    if (item.slug === "gravitational_orbit_mechanics" && (cleanQuery.includes("orbit") || cleanQuery.includes("kepler") || cleanQuery.includes("vis-viva") || cleanQuery.includes("gravity well"))) score += 20;
-    if (item.slug === "bernoulli" && (cleanQuery.includes("bernoulli") || cleanQuery.includes("venturi"))) score += 20;
-    if (item.slug === "lithium_ion_battery_dynamics" && (cleanQuery.includes("battery") || cleanQuery.includes("lithium") || cleanQuery.includes("butler volmer"))) score += 20;
-    if (item.slug === "neuroscience_stress_brain_anatomy" && (cleanQuery.includes("neuroscience") || cleanQuery.includes("hpa axis") || cleanQuery.includes("brain") || cleanQuery.includes("amygdala"))) score += 20;
-    if (item.slug === "usb_flash_nand_memory" && (cleanQuery.includes("nand") || cleanQuery.includes("floating gate") || cleanQuery.includes("flash memory"))) score += 20;
-    if (item.slug === "quantum_tunneling_barrier" && (cleanQuery.includes("quantum tunneling") || cleanQuery.includes("tunneling barrier"))) score += 20;
-    if (item.slug === "bayes_theorem_conditional_probability" && (cleanQuery.includes("bayes") || cleanQuery.includes("conditional probability"))) score += 20;
-    if (item.slug === "human_kidney_nephron_function" && (cleanQuery.includes("kidney") || cleanQuery.includes("nephron") || cleanQuery.includes("renal"))) score += 20;
-    if (item.slug === "stomach_acid_digestion" && (cleanQuery.includes("stomach") || cleanQuery.includes("gastric") || cleanQuery.includes("pepsin"))) score += 20;
-    if (item.slug === "earth_gravity_tunnel" && (cleanQuery.includes("gravity tunnel") || cleanQuery.includes("earth tunnel"))) score += 20;
-    if (item.slug === "butterfly_life_cycle_simulation" && (cleanQuery.includes("butterfly") || cleanQuery.includes("metamorphosis") || cleanQuery.includes("chrysalis"))) score += 20;
-    if (item.slug === "paper_factory_fourdrinier" && (cleanQuery.includes("paper factory") || cleanQuery.includes("pulp") || cleanQuery.includes("fourdrinier"))) score += 20;
-
-    if (score > highestScore && score >= 10) {
-      highestScore = score;
-      bestMatch = item;
-    }
-  }
-
-  return bestMatch;
+function findExactSlugMatch(query: string): SimulationItem | undefined {
+  const clean = query.trim().toLowerCase();
+  return SIMULATIONS_CATALOG.find((s) => s.slug === clean || s.id === clean);
 }
 
 export async function POST(req: NextRequest) {
@@ -73,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    const lowerQuery = query.toLowerCase();
+    const lowerQuery = query.toLowerCase().trim();
 
     // =========================================================================
     // 1. CHECK IF NOTEBOOK HAS INDEXED SOURCES (DO NOT CRAWL NEW ON QUERY)
@@ -107,21 +55,23 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    // If active sources is strictly 0, check catalog first before dispatching dual-agent generation
+    // If active sources is strictly 0, dispatch full dynamic simulation pipeline
     if (availableSources.length === 0 && indexedChunks.length === 0) {
-      const catalogDirect = findCatalogMatch(query);
-      if (catalogDirect) {
+      // Only return static item if query is literally an exact catalog slug
+      const exactSlug = findExactSlugMatch(query);
+      if (exactSlug) {
         return NextResponse.json({
           status: "success",
           query,
-          answer: `Loaded pre-compiled 60 FPS scientific simulation for **"${catalogDirect.title}"** from the knowledge catalog.\n\n### Key Governing Principles & Equations:\n${catalogDirect.equations.map((eq) => `• \`${eq}\``).join("\n")}\n\n### Experimental Parameters:\n• **Primary Controls**: ${catalogDirect.keyParameters.map((p) => `**${p.name}** (\`${p.value} ${p.unit}\`)`).join(", ")}.\n• **Accuracy**: 60 FPS verified numerical solver.\n\n✨ **Interact with real-time controls in the Studio panel on the right!**`,
+          answer: `Loaded pre-compiled 60 FPS scientific simulation for **"${exactSlug.title}"** from the knowledge catalog.\n\n### Key Governing Principles & Equations:\n${exactSlug.equations.map((eq) => `• \`${eq}\``).join("\n")}\n\n### Experimental Parameters:\n• **Primary Controls**: ${exactSlug.keyParameters.map((p) => `**${p.name}** (\`${p.value} ${p.unit}\`)`).join(", ")}.\n• **Accuracy**: 60 FPS verified numerical solver.\n\n✨ **Interact with real-time controls in the Studio panel on the right!**`,
           sources: [],
-          simulation: catalogDirect,
+          simulation: exactSlug,
           dynamicGeneration: false,
         });
       }
 
-      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const topicSlug = query.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 32);
+      const jobId = `job_${topicSlug}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       setJob(jobId, {
         status: "running",
         step: "spec",
@@ -175,7 +125,6 @@ export async function POST(req: NextRequest) {
     // =========================================================================
     // 2. SEARCH OVER ALREADY INDEXED RAG DATABASE
     // =========================================================================
-    // Score existing chunks against the query keywords
     const queryTokens = lowerQuery
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
@@ -199,15 +148,16 @@ export async function POST(req: NextRequest) {
       retrievedContextSnippets = topChunks.map((c) => c.text.trim());
     }
 
-    // Fallback snippets from active sources if no chunks in cache
     if (retrievedContextSnippets.length === 0) {
       retrievedContextSnippets = activeSources.slice(0, 3).map((s) => s.snippet);
     }
 
     // =========================================================================
-    // 3. MATCH RELEVANT SIMULATION FROM PRE-BUILT CATALOG (IF APPLICABLE)
+    // 3. DETERMINE DYNAMIC GENERATION VS EXPLANATORY FOLLOW-UP
     // =========================================================================
-    let matchedSim: SimulationItem | undefined = findCatalogMatch(query);
+    const isExplicitNewSim = /\b(simulate|simulation|generate|create|model|build|make|visualize|new|solve|show)\b/i.test(query);
+
+    let matchedSim: SimulationItem | undefined = findExactSlugMatch(query);
 
     let matchesExistingTopic = false;
     if (cacheData && cacheData.simulation) {
@@ -219,8 +169,8 @@ export async function POST(req: NextRequest) {
       matchesExistingTopic = simTitleWords.some((w: string) => lowerQuery.includes(w));
     }
 
-    if (!matchedSim && cacheData && cacheData.simulation && matchesExistingTopic) {
-      // Only preserve existing simulation if the query is an explanatory follow-up about that specific topic
+    // Only reuse existing simulation if query is an explanatory follow-up about that current note
+    if (!matchedSim && cacheData && cacheData.simulation && matchesExistingTopic && !isExplicitNewSim) {
       matchedSim = cacheData.simulation;
     }
 
@@ -246,10 +196,8 @@ export async function POST(req: NextRequest) {
         ? topSnippets.map((s, i) => `[${i + 1}] ${s}`).join("\n\n")
         : `Analyzing indexed technical knowledge for: "${query}".`;
 
-      answer = `Based on the authoritative sources currently indexed in your notebook's RAG database [1, 2, 3]:\n\n${snippetText}\n\n### 🔬 LangGraph Simulation Pipeline Active\n\nI have extracted the governing physical relationships and mathematical equations from your RAG knowledge base. Now dispatching to the dual LangGraph agents:\n\n1. **Agent 1 (Spec Synthesizer)**: Formulating equations, state variables, and SVG scene blueprints into a verified JSON specification.\n2. **Agent 2 (Simulation Engine)**: Generating React 18 + GSAP simulation code, verifying AST with Babel, self-healing, and exporting the 60 FPS interactive model.\n\n⏳ **Follow real-time compilation in the Studio panel on the right!**`;
-
-      // Directly run generation with state tracking
-      const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const topicSlug = query.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 32);
+      const jobId = `job_${topicSlug}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       generationJobId = jobId;
 
       setJob(jobId, {

@@ -3,63 +3,37 @@ import { SIMULATIONS_CATALOG, SimulationItem } from "@/lib/simulationsData";
 import { setJob, getJob } from "@/lib/storage";
 import { generateSimulation } from "@/lib/simulationGenerator";
 
-function findCatalogMatch(topic: string): SimulationItem | undefined {
-  const clean = topic.trim().toLowerCase().replace(/[^a-z0-9\s]/g, " ");
-  // Exact match
-  const exact = SIMULATIONS_CATALOG.find(
-    (s) => s.slug.toLowerCase() === clean || s.title.toLowerCase() === clean
+function findExactSlugMatch(topic: string): SimulationItem | undefined {
+  const clean = topic.trim().toLowerCase();
+  return SIMULATIONS_CATALOG.find(
+    (s) => s.slug === clean || s.id === clean
   );
-  if (exact) return exact;
-
-  // Keyword / slug / title match
-  const queryTokens = clean.split(/\s+/).filter((t: string) => t.length > 2 && !['simulate', 'simulation', 'generate', 'model', 'show', 'create', 'build', 'please', 'with', 'about', 'the'].includes(t));
-  let bestMatch: SimulationItem | undefined;
-  let highestScore = 0;
-
-  for (const item of SIMULATIONS_CATALOG) {
-    let score = 0;
-    const titleLower = item.title.toLowerCase();
-    const slugLower = item.slug.toLowerCase().replace(/_/g, " ");
-
-    if (clean.includes(titleLower) || clean.includes(slugLower)) score += 20;
-
-    for (const token of queryTokens) {
-      if (titleLower.includes(token)) score += 5;
-      if (slugLower.includes(token)) score += 5;
-    }
-
-    if (score > highestScore && score >= 10) {
-      highestScore = score;
-      bestMatch = item;
-    }
-  }
-
-  return bestMatch;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { query, topic, notebookId } = body;
+    const { query, topic, notebookId, exactCatalogSlug } = body;
     const searchTopic = (query || topic || "").trim();
 
     if (!searchTopic) {
       return NextResponse.json({ error: "Query/topic is required" }, { status: 400 });
     }
 
-    // Generate unique job ID
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Generate unique job ID with embedded topic slug
+    const topicSlug = searchTopic.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 32);
+    const jobId = `job_${topicSlug}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-    // Check catalog for an exact or high-confidence match
-    const catalogMatch = findCatalogMatch(searchTopic);
-    if (catalogMatch) {
+    // Check catalog ONLY if explicitly requested via exact slug
+    const exactMatch = exactCatalogSlug ? findExactSlugMatch(exactCatalogSlug) : findExactSlugMatch(searchTopic);
+    if (exactMatch && exactCatalogSlug) {
       const completedStatus = {
         status: "completed",
         step: "completed",
-        detail: `Loaded pre-compiled simulation for: ${catalogMatch.title}`,
+        detail: `Loaded pre-compiled simulation for: ${exactMatch.title}`,
         timestamp: Date.now() / 1000,
-        result: { simulation: catalogMatch },
-        simulation: catalogMatch,
+        result: { simulation: exactMatch },
+        simulation: exactMatch,
       };
       setJob(jobId, completedStatus);
 
@@ -67,7 +41,7 @@ export async function POST(req: NextRequest) {
         status: "completed",
         jobId,
         topic: searchTopic,
-        simulation: catalogMatch,
+        simulation: exactMatch,
         message: "Simulation ready immediately from catalog.",
       });
     }
